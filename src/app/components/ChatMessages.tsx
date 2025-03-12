@@ -33,13 +33,13 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
   ({ messages, isLoading, error, isClient }, ref) => {
     return (
       <div className="flex-1 overflow-y-auto bg-transparent" ref={ref}>
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-8">
+        <div className="max-w-6xl mx-auto px-4 py-4 space-y-8">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className="w-full">
                 {message.sender === 'user' ? (
                   // User message
-                  <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                  <div className="bg-white border border-gray-200 p-6 rounded-lg">
                     <p className="text-xl whitespace-pre-wrap" style={{ lineHeight: '1.6' }}>{message.content}</p>
                     {message.drawingElements && message.drawingElements.length > 0 && (
                       <div className="mt-4 bg-white border rounded-lg p-3">
@@ -63,7 +63,7 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
                   </div>
                 ) : (
                   // Agent message
-                  <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
+                  <div className="bg-blue-50 border border-blue-100 p-6 rounded-lg">
                     <p className="text-xl whitespace-pre-wrap" style={{ lineHeight: '1.6' }}>{message.content}</p>
                   </div>
                 )}

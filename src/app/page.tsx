@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { useChatMessages } from './hooks/useChatMessages';
 import { useDrawingTool } from './hooks/useDrawingTool';
 import { useClientSide } from './hooks/useClientSide';
+import { useResizablePanel } from './hooks/useResizablePanel';
 import MessageInput from './components/MessageInput';
 import ChatDrawingTool from './components/ChatDrawingTool';
 import ChatMessages from './components/ChatMessages';
@@ -44,11 +45,18 @@ export default function Home() {
     drawingHeight,
     currentDrawingElements,
     handleDrawingChange,
-    handleResizeStart,
+    handleResizeStart: handleDrawingResizeStart,
     handleSubmitDrawing: submitDrawing,
     toggleDrawingMode,
     closeDrawingMode
   } = useDrawingTool(handleSubmitDrawing);
+
+  // Resizable panel
+  const {
+    panelWidth,
+    handleResizeStart: handlePanelResizeStart,
+    isResizing
+  } = useResizablePanel(window.innerWidth * 0.33); // Start with 1/3 of window width
 
   // Ensure chat scrolls to bottom when messages update
   if (chatContainerRef.current) {
@@ -60,9 +68,9 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full">
         {/* Top header */}
-        <div className="bg-white p-4 shadow-md">
+        <div className="bg-white p-5 shadow-md">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">MVP Builder - Sketch Interface</h1>
+            <h1 className="text-3xl font-bold">MVP Builder - Sketch Interface</h1>
             <AgentSelector 
               currentAgent={currentAgent}
               onAgentChange={switchAgent}
@@ -75,11 +83,11 @@ export default function Home() {
         <div className="flex-1 flex p-4 gap-4 overflow-hidden">
           {/* Chat Interface */}
           <div className="flex-1 bg-white rounded-lg shadow-md flex flex-col h-full overflow-hidden">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h2 className="text-xl font-semibold">{currentAgent} Agent</h2>
+            <div className="p-5 border-b flex justify-between items-center">
+              <h2 className="text-2xl font-semibold">{currentAgent} Agent</h2>
               <button 
                 onClick={handleResetChat}
-                className="text-sm px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded"
+                className="text-base px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
                 disabled={isLoading}
               >
                 Reset Chat
@@ -101,7 +109,7 @@ export default function Home() {
                 isClient={isClient}
                 drawingHeight={drawingHeight}
                 onDrawingChange={handleDrawingChange}
-                onHandleResizeStart={handleResizeStart}
+                onHandleResizeStart={handleDrawingResizeStart}
                 onCancelDrawing={closeDrawingMode}
                 onSubmitDrawing={submitDrawing}
                 isLoading={isLoading}
@@ -117,7 +125,7 @@ export default function Home() {
             />
           </div>
           
-          {/* Right Panel with Tabs */}
+          {/* Right Panel with Tabs - Now Resizable */}
           <RightPanel
             currentTab={currentRightTab}
             onTabChange={setCurrentRightTab}
@@ -127,6 +135,8 @@ export default function Home() {
             architectureContent={architectureContent}
             hasMasterplan={hasMasterplan}
             onExportContent={handleExportContent}
+            panelWidth={panelWidth}
+            handleResizeStart={handlePanelResizeStart}
             ref={answerContainerRef}
           />
         </div>

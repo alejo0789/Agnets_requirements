@@ -32,63 +32,63 @@ interface ChatMessagesProps {
 const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
   ({ messages, isLoading, error, isClient }, ref) => {
     return (
-      <div className="flex-1 p-4 overflow-y-auto space-y-4" ref={ref}>
-        {messages.map((message) => (
-          <div key={message.id}>
-            {message.sender === 'user' ? (
-              // User message
-              <div className="flex justify-end">
-                <div className="bg-gray-200 p-3 rounded-lg max-w-[80%]">
-                  <p>{message.content}</p>
-                  {message.drawingElements && message.drawingElements.length > 0 && (
-                    <div className="mt-2 bg-white border rounded p-2">
-                      <div className="h-40 w-full">
-                        {isClient && (
-                          <Excalidraw
-                            initialData={{
-                              elements: message.drawingElements,
-                              appState: { 
-                                viewBackgroundColor: "#ffffff",
-                                readOnly: true
-                              },
-                              scrollToContent: true
-                            }}
-                            viewModeEnabled={true}
-                          />
-                        )}
+      <div className="flex-1 overflow-y-auto bg-transparent" ref={ref}>
+        <div className="max-w-2xl mx-auto px-4 py-4 space-y-8">
+          {messages.map((message) => (
+            <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className="w-full">
+                {message.sender === 'user' ? (
+                  // User message
+                  <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                    <p className="text-xl whitespace-pre-wrap" style={{ lineHeight: '1.6' }}>{message.content}</p>
+                    {message.drawingElements && message.drawingElements.length > 0 && (
+                      <div className="mt-4 bg-white border rounded-lg p-3">
+                        <div className="h-52 w-full">
+                          {isClient && (
+                            <Excalidraw
+                              initialData={{
+                                elements: message.drawingElements,
+                                appState: { 
+                                  viewBackgroundColor: "#ffffff",
+                                  readOnly: true
+                                },
+                                scrollToContent: true
+                              }}
+                              viewModeEnabled={true}
+                            />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  // Agent message
+                  <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
+                    <p className="text-xl whitespace-pre-wrap" style={{ lineHeight: '1.6' }}>{message.content}</p>
+                  </div>
+                )}
               </div>
-            ) : (
-              // Agent message
-              <div className="flex justify-start">
-                <div className="bg-blue-100 p-3 rounded-lg max-w-[80%]">
-                  <p>{message.content}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="flex justify-center items-center py-4">
-            <div className="animate-pulse flex space-x-2">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
             </div>
-          </div>
-        )}
-        
-        {/* Error message */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            <p>{error}</p>
-          </div>
-        )}
+          ))}
+          
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-pulse flex space-x-3">
+                <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+              </div>
+            </div>
+          )}
+          
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-5 rounded-lg text-xl">
+              <p>{error}</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

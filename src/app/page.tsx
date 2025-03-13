@@ -56,7 +56,7 @@ export default function Home() {
     panelWidth,
     handleResizeStart: handlePanelResizeStart,
     isResizing
-  } = useResizablePanel(window.innerWidth * 0.33); // Start with 1/3 of window width
+  } = useResizablePanel(window.innerWidth * 0.40); // Start with 40% of window width
 
   // Ensure chat scrolls to bottom when messages update
   if (chatContainerRef.current) {
@@ -79,10 +79,10 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Main workspace */}
-        <div className="flex-1 flex p-4 gap-4 overflow-hidden">
-          {/* Chat Interface */}
-          <div className="flex-1 bg-white rounded-lg shadow-md flex flex-col h-full overflow-hidden">
+        {/* Main workspace with improved spacing */}
+        <div className="flex-1 flex p-6 gap-16 overflow-hidden">
+          {/* Left panel with more space */}
+          <div className="flex-1 bg-white rounded-lg shadow-md flex flex-col h-full overflow-hidden ml-12">
             <div className="p-5 border-b flex justify-between items-center">
               <h2 className="text-2xl font-semibold">{currentAgent} Agent</h2>
               <button 
@@ -125,7 +125,7 @@ export default function Home() {
             />
           </div>
           
-          {/* Right Panel with Tabs - Now Resizable */}
+          {/* Right Panel with Tabs - Now Resizable with more space between */}
           <RightPanel
             currentTab={currentRightTab}
             onTabChange={setCurrentRightTab}

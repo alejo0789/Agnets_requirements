@@ -31,6 +31,88 @@ interface ChatMessagesProps {
 
 const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
   ({ messages, isLoading, error, isClient }, ref) => {
+    // Function to format agent message content with HTML list items
+    const formatAgentMessage = (content: string) => {
+      // Check if the message contains HTML list items
+      const hasHtmlLists = content.includes('<li>');
+      
+      if (hasHtmlLists) {
+        // Process the content to properly render HTML lists
+        const processedContent = content.split('\n').map((line, index) => {
+          // Check if line contains list items
+          if (line.includes('<li>')) {
+            // Extract the list item content
+            const listItemContent = line.replace(/<\/?li>/g, '').trim();
+            return (
+              <li key={`list-${index}`} className="text-xl ml-8 my-2">
+                {listItemContent}
+              </li>
+            );
+          } else if (line.trim() === '') {
+            return <div key={`space-${index}`} className="h-3"></div>;
+          } else {
+            return (
+              <p key={`p-${index}`} className="text-xl my-3" style={{ lineHeight: '1.6' }}>
+                {line}
+              </p>
+            );
+          }
+        });
+        
+        // Group consecutive list items into ordered lists
+        const result: JSX.Element[] = [];
+        let currentList: JSX.Element[] = [];
+        let listStarted = false;
+        
+        processedContent.forEach((element, index) => {
+          if (React.isValidElement(element) && element.type === 'li') {
+            // If this is the first list item, start a new list
+            if (!listStarted) {
+              listStarted = true;
+            }
+            currentList.push(element);
+          } else {
+            // If we have list items collected and this is not a list item,
+            // add the list to the result and reset
+            if (currentList.length > 0) {
+              result.push(
+                <ol key={`ol-${index}`} className="list-decimal my-4">
+                  {currentList}
+                </ol>
+              );
+              currentList = [];
+              listStarted = false;
+            }
+            result.push(element);
+          }
+        });
+        
+        // If there are remaining list items, add them
+        if (currentList.length > 0) {
+          result.push(
+            <ol key="ol-final" className="list-decimal my-4">
+              {currentList}
+            </ol>
+          );
+        }
+        
+        return result;
+      } else {
+        // Fall back to regular paragraph formatting if no HTML lists are found
+        return content.split('\n').map((paragraph, index) => {
+          if (paragraph.trim() === '') {
+            return <div key={index} className="h-3"></div>;
+          }
+          
+          return (
+            <p key={index} className="text-xl my-3" style={{ lineHeight: '1.6' }}>
+              {paragraph}
+            </p>
+          );
+        });
+      }
+    };
+
     return (
       <div className="flex-1 overflow-y-auto bg-transparent" ref={ref}>
         <div className="max-w-6xl mx-auto px-4 py-4 space-y-8">
@@ -62,9 +144,11 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
                     )}
                   </div>
                 ) : (
-                  // Agent message
+                  // Agent message with formatted content
                   <div className="bg-blue-50 border border-blue-100 p-6 rounded-lg">
-                    <p className="text-xl whitespace-pre-wrap" style={{ lineHeight: '1.6' }}>{message.content}</p>
+                    <div className="agent-message">
+                      {formatAgentMessage(message.content)}
+                    </div>
                   </div>
                 )}
               </div>

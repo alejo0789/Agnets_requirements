@@ -15,6 +15,34 @@ interface RightPanelProps {
   handleResizeStart: (e: React.MouseEvent) => void;
 }
 
+// Helper function to handle inline markdown formatting like bold text
+const formatInlineMarkdown = (text: string) => {
+  // Handle bold text with **
+  const parts = [];
+  let lastIndex = 0;
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  let match;
+  
+  while ((match = boldRegex.exec(text)) !== null) {
+    // Add text before the bold part
+    if (match.index > lastIndex) {
+      parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex, match.index)}</span>);
+    }
+    
+    // Add the bold part
+    parts.push(<strong key={`bold-${match.index}`} className="font-bold">{match[1]}</strong>);
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>);
+  }
+  
+  return parts.length > 0 ? parts : text;
+};
+
 const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
   ({ 
     currentTab, 
@@ -29,25 +57,131 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     handleResizeStart 
   }, ref) => {
     
-    // Render the markdown content for the right panel
+    // Improved markdown rendering function
     const renderMarkdown = (markdown: string) => {
-      return markdown.split('\n').map((line, index) => {
+      const lines = markdown.split('\n');
+      const result = [];
+      let currentListItems = [];
+      let inList = false;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Handle headings
         if (line.startsWith('# ')) {
-          return <h1 key={index} className="text-3xl font-bold mt-6 mb-3">{line.substring(2)}</h1>;
-        } else if (line.startsWith('## ')) {
-          return <h2 key={index} className="text-2xl font-semibold mt-5 mb-2">{line.substring(3)}</h2>;
-        } else if (line.startsWith('### ')) {
-          return <h3 key={index} className="text-xl font-semibold mt-4 mb-2">{line.substring(4)}</h3>;
-        } else if (line.startsWith('- ')) {
-          return <li key={index} className="ml-6 text-lg my-2">{line.substring(2)}</li>;
-        } else if (line.startsWith('  - ')) {
-          return <li key={index} className="ml-10 text-lg my-2">{line.substring(4)}</li>;
-        } else if (line === '') {
-          return <div key={index} className="h-3"></div>;
-        } else {
-          return <p key={index} className="my-3 text-lg">{line}</p>;
+          // Close any open list
+          if (inList) {
+            result.push(
+              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+                {currentListItems}
+              </ul>
+            );
+            currentListItems = [];
+            inList = false;
+          }
+          
+          result.push(
+            <h1 key={i} className="text-3xl font-bold mt-6 mb-3">
+              {line.substring(2)}
+            </h1>
+          );
+        } 
+        else if (line.startsWith('## ')) {
+          // Close any open list
+          if (inList) {
+            result.push(
+              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+                {currentListItems}
+              </ul>
+            );
+            currentListItems = [];
+            inList = false;
+          }
+          
+          result.push(
+            <h2 key={i} className="text-2xl font-semibold mt-5 mb-2">
+              {line.substring(3)}
+            </h2>
+          );
+        } 
+        else if (line.startsWith('### ')) {
+          // Close any open list
+          if (inList) {
+            result.push(
+              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+                {currentListItems}
+              </ul>
+            );
+            currentListItems = [];
+            inList = false;
+          }
+          
+          result.push(
+            <h3 key={i} className="text-xl font-semibold mt-4 mb-2">
+              {line.substring(4)}
+            </h3>
+          );
         }
-      });
+        // Handle bullet points
+        else if (line.match(/^\s*[\*\-]\s/)) {
+          inList = true;
+          
+          // Extract the content after the bullet
+          const content = line.replace(/^\s*[\*\-]\s+/, '');
+          
+          currentListItems.push(
+            <li key={`item-${i}`} className="my-2">
+              {formatInlineMarkdown(content)}
+            </li>
+          );
+        }
+        // Handle empty lines
+        else if (line.trim() === '') {
+          // Close any open list
+          if (inList) {
+            result.push(
+              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+                {currentListItems}
+              </ul>
+            );
+            currentListItems = [];
+            inList = false;
+          }
+          
+          // Add spacing between paragraphs
+          result.push(<div key={i} className="h-3"></div>);
+        }
+        // Regular paragraph text
+        else {
+          // Close any open list
+          if (inList) {
+            result.push(
+              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+                {currentListItems}
+              </ul>
+            );
+            currentListItems = [];
+            inList = false;
+          }
+          
+          result.push(
+            <p key={i} className="my-3 text-lg">
+              {formatInlineMarkdown(line)}
+            </p>
+          );
+        }
+      }
+      
+      // Close any open list at the end of processing
+      if (inList) {
+        result.push(
+          <ul key="final-list" className="my-4 pl-8 list-disc">
+            {currentListItems}
+          </ul>
+        );
+      }
+      
+      return result;
     };
 
     return (

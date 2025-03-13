@@ -238,24 +238,36 @@ export const useChatMessages = () => {
   
   // Check if the message contains a masterplan.md file
   const checkForMasterplan = (message: string): string | null => {
-    // Look for markdown patterns that indicate a masterplan document
-    if (message.includes("# ") && 
-        (message.includes("## App Overview") || 
-         message.includes("## Core Features") || 
-         message.includes("## Target Audience"))) {
+    // A real masterplan should have multiple sections
+    const requiredSections = [
+      "## App Overview", 
+      "## Core Features", 
+      "## Target Audience",
+      "## Technical Stack"
+    ];
+    
+    // Count how many required sections are present
+    const sectionCount = requiredSections.filter(section => 
+      message.includes(section)
+    ).length;
+    
+    // Only consider it a masterplan if it has at least 3 of the required sections
+    // AND starts with a markdown title
+    if (message.includes("# ") && sectionCount >= 3) {
       return message;
     }
     
-    // Try to extract content between triple backticks if it looks like markdown
+    // Check for markdown code blocks with similar criteria
     const mdPattern = /```(?:md|markdown)?\s([\s\S]*?)```/g;
     const mdMatch = mdPattern.exec(message);
     
     if (mdMatch && mdMatch[1]) {
       const content = mdMatch[1].trim();
-      if (content.includes("# ") && 
-          (content.includes("## App Overview") || 
-           content.includes("## Core Features") || 
-           content.includes("## Target Audience"))) {
+      const contentSectionCount = requiredSections.filter(section => 
+        content.includes(section)
+      ).length;
+      
+      if (content.includes("# ") && contentSectionCount >= 3) {
         return content;
       }
     }

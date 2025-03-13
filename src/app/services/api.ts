@@ -134,3 +134,40 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
     throw error;
   }
 }
+/**
+ * Generate UI/UX mockups using Claude AI based on the masterplan
+ * @param masterplan The masterplan content to use for mockup generation
+ * @returns The response from the API with mockup content
+ */
+export async function generateMockups(masterplan?: string): Promise<{ 
+  success: boolean,
+  mockups?: Array<{type: string, content: string}>,
+  message?: string
+}> {
+  try {
+    console.log('Requesting mockup generation from Claude AI');
+    
+    const response = await fetch(`${API_BASE_URL}/generate-mockups`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ masterplan }),
+      credentials: 'include', // Important for session cookies
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API error response:', errorText);
+      throw new Error(`API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Received mockups from Claude AI');
+    
+    return data;
+  } catch (error) {
+    console.error('Error generating mockups:', error);
+    throw error;
+  }
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { sendMessage, resetSession } from '../services/api';
+import { sendMessage, resetSession, generateMockups } from '../services/api';
 
 type MessageType = {
   id: string;
@@ -11,6 +11,10 @@ type MessageType = {
 
 type AgentType = "Requirements" | "UI/UX" | "Frontend" | "Database" | "Backend";
 type RightPanelTabType = "Masterplan" | "UI/UX" | "Architecture" | "Requirements";
+type MockupType = {
+  type: string;
+  content: string;
+};
 
 export const useChatMessages = () => {
   // Loading and error states
@@ -38,6 +42,13 @@ export const useChatMessages = () => {
   // Tab states
   const [currentRightTab, setCurrentRightTab] = useState<RightPanelTabType>("Requirements");
   const [hasMasterplan, setHasMasterplan] = useState(false);
+
+  // Mockup states
+  const [mockups, setMockups] = useState<MockupType[]>([]);
+  const [isMockupGenerating, setIsMockupGenerating] = useState(false);
+  
+  // Store submitted sketches
+  const [submittedSketches, setSubmittedSketches] = useState<any[][]>([]);
 
   // Reset the chat session but maintain right panel content
   const handleResetChat = async () => {
@@ -134,6 +145,9 @@ export const useChatMessages = () => {
       try {
         setIsLoading(true);
         
+        // Save the drawing elements to our state
+        setSubmittedSketches(prev => [...prev, [...drawingElements]]);
+        
         // Create a new message with the drawing
         const newDrawingMessage: MessageType = {
           id: Date.now().toString(),
@@ -219,6 +233,94 @@ export const useChatMessages = () => {
       setError(err.message || "Failed to switch agent. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle generating mockups based on masterplan and sketches
+  const handleGenerateMockups = async () => {
+    if (!masterplanContent) {
+      setError("No masterplan available. Please generate a masterplan first.");
+      return;
+    }
+
+    try {
+      setIsMockupGenerating(true);
+      
+      // Add a message from the user requesting mockups
+      const newUserMessage: MessageType = {
+        id: Date.now().toString(),
+        sender: 'user',
+        content: "Can you generate UI/UX mockups based on our masterplan and sketches?",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, newUserMessage]);
+      
+      // Add a processing message from the agent
+      const processingMessage: MessageType = {
+        id: (Date.now() + 1).toString(),
+        sender: 'agent',
+        content: "I'm generating UI/UX mockups based on the masterplan and your sketches. This may take a minute...",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, processingMessage]);
+      
+      // Prepare sketch data for the API
+      const sketchData = submittedSketches.length > 0 ? submittedSketches : [];
+      
+      // Call the API with both masterplan and sketches
+      const response = await generateMockups(masterplanContent, sketchData);
+      
+      if (response.success && response.mockups) {
+        // Save the mockups
+        setMockups(response.mockups);
+        
+        // Update the UI/UX content with the text descriptions
+        let uiUxUpdatedContent = uiUxContent + "\n\n## UI/UX Mockups\n\n";
+        
+        response.mockups.forEach((mockup, index) => {
+          if (mockup.type === 'text') {
+            uiUxUpdatedContent += mockup.content + "\n\n";
+          }
+        });
+        
+        setUiUxContent(uiUxUpdatedContent);
+        
+        // Switch to the UI/UX tab
+        setCurrentRightTab("UI/UX");
+        
+        // Replace the processing message with a success message
+        const successMessage: MessageType = {
+          id: processingMessage.id,
+          sender: 'agent',
+          content: "I've generated UI/UX mockups based on our masterplan and your sketches! You can see them in the UI/UX tab.",
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => 
+          prev.map(msg => msg.id === processingMessage.id ? successMessage : msg)
+        );
+      } else {
+        throw new Error(response.message || "Failed to generate mockups");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to generate mockups. Please try again.");
+      
+      // Update the processing message to show the error
+      setMessages(prev => 
+        prev.map(msg => {
+          if (msg.sender === 'agent' && msg.content.includes("I'm generating UI/UX mockups")) {
+            return {
+              ...msg,
+              content: "Sorry, I couldn't generate the UI/UX mockups. Please try again."
+            };
+          }
+          return msg;
+        })
+      );
+    } finally {
+      setIsMockupGenerating(false);
     }
   };
 
@@ -365,6 +467,9 @@ export const useChatMessages = () => {
     uiUxContent,
     architectureContent,
     hasMasterplan,
+    mockups,
+    isMockupGenerating,
+    submittedSketches,
     
     // State setters
     setCurrentRightTab,
@@ -374,8 +479,9 @@ export const useChatMessages = () => {
     handleSubmitDrawing,
     handleResetChat,
     switchAgent,
-    handleExportContent
+    handleExportContent,
+    handleGenerateMockups
   };
 };
 
-export type { MessageType, AgentType, RightPanelTabType };
+export type { MessageType, AgentType, RightPanelTabType, MockupType };

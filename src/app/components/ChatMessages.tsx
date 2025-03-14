@@ -25,12 +25,23 @@ type MessageType = {
 interface ChatMessagesProps {
   messages: MessageType[];
   isLoading: boolean;
+  isMockupGenerating?: boolean;
   error: string | null;
   isClient: boolean;
+  hasMasterplan?: boolean;
+  onGenerateMockups?: () => void;
 }
 
 const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
-  ({ messages, isLoading, error, isClient }, ref) => {
+  ({ 
+    messages, 
+    isLoading, 
+    isMockupGenerating, 
+    error, 
+    isClient, 
+    hasMasterplan,
+    onGenerateMockups 
+  }, ref) => {
     // Function to format agent message content with HTML list items
     const formatAgentMessage = (content: string) => {
       // Check if the message contains HTML list items
@@ -113,10 +124,17 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
       }
     };
 
+    // Check if the last message is about masterplan creation
+    const lastMessage = messages[messages.length - 1];
+    const isMasterplanMessage = lastMessage && 
+      lastMessage.sender === 'agent' && 
+      lastMessage.content.includes('masterplan') && 
+      hasMasterplan;
+
     return (
       <div className="flex-1 overflow-y-auto bg-transparent" ref={ref}>
         <div className="max-w-6xl mx-auto px-4 py-4 space-y-8">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className="w-full">
                 {message.sender === 'user' ? (
@@ -149,6 +167,27 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
                     <div className="agent-message">
                       {formatAgentMessage(message.content)}
                     </div>
+                    
+                    {/* Add "Generate Mockups" button if this is a masterplan message */}
+                    {index === messages.length - 1 && 
+                     isMasterplanMessage && 
+                     onGenerateMockups && (
+                      <div className="mt-4">
+                        <button
+                          onClick={onGenerateMockups}
+                          disabled={isLoading || isMockupGenerating}
+                          className={`mt-2 ${
+                            isLoading || isMockupGenerating
+                              ? 'bg-blue-300 cursor-not-allowed'
+                              : 'bg-blue-500 hover:bg-blue-600'
+                          } text-white px-4 py-2 rounded text-base font-medium transition-colors`}
+                        >
+                          {isMockupGenerating 
+                            ? 'Generating UI/UX Mockups...' 
+                            : 'Generate UI/UX Mockups'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -2,6 +2,11 @@ import React, { forwardRef } from 'react';
 
 type RightPanelTabType = "Masterplan" | "UI/UX" | "Architecture" | "Requirements";
 
+type MockupType = {
+  type: string;
+  content: string;
+};
+
 interface RightPanelProps {
   currentTab: RightPanelTabType;
   onTabChange: (tab: RightPanelTabType) => void;
@@ -10,6 +15,7 @@ interface RightPanelProps {
   uiUxContent: string;
   architectureContent: string;
   hasMasterplan: boolean;
+  mockups: MockupType[];
   onExportContent: () => void;
   panelWidth: number;
   handleResizeStart: (e: React.MouseEvent) => void;
@@ -52,6 +58,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     uiUxContent, 
     architectureContent, 
     hasMasterplan,
+    mockups,
     onExportContent,
     panelWidth,
     handleResizeStart 
@@ -184,6 +191,46 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
       return result;
     };
 
+    // Function to render SVG mockups safely
+ // Function to render SVG mockups safely
+const renderSvgMockup = (svgContent: string, index: number) => {
+  try {
+    // Remove any XML declaration that might cause issues
+    let cleanedSvg = svgContent.replace(/<\?xml[^?]*\?>/, '');
+    
+    // Make sure the SVG has proper namespace
+    if (!cleanedSvg.includes('xmlns=')) {
+      cleanedSvg = cleanedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    
+    // Create a unique ID for the mockup
+    const mockupId = `mockup-${index}`;
+    
+    // Return in a responsive container
+    return (
+      <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-white shadow-md">
+        <div 
+          id={mockupId}
+          className="svg-container w-full overflow-auto"
+          dangerouslySetInnerHTML={{ __html: cleanedSvg }} 
+        />
+      </div>
+    );
+  } catch (error) {
+    // If there's an error rendering the SVG, show an error message
+    console.error("Error rendering SVG:", error);
+    return (
+      <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-red-50 shadow-md">
+        <p className="text-red-500">Error rendering mockup. SVG content might be invalid.</p>
+        <details>
+          <summary className="cursor-pointer text-sm text-gray-500">View SVG Code</summary>
+          <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{svgContent}</pre>
+        </details>
+      </div>
+    );
+  }
+}
+
     return (
       <div 
         style={{ width: `${panelWidth}px` }} 
@@ -241,7 +288,21 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           <div className="prose prose-lg max-w-none">
             {currentTab === "Masterplan" && renderMarkdown(masterplanContent)}
             {currentTab === "Requirements" && renderMarkdown(requirementsContent)}
-            {currentTab === "UI/UX" && renderMarkdown(uiUxContent)}
+            {currentTab === "UI/UX" && (
+              <>
+                {renderMarkdown(uiUxContent)}
+                
+                {/* Render SVG mockups if available */}
+                {mockups.length > 0 && (
+                  <div className="mt-8">
+                    <h2 className="text-2xl font-semibold mb-4">UI/UX Mockups</h2>
+                    {mockups.map((mockup, index) => (
+                      mockup.type === 'svg' && renderSvgMockup(mockup.content, index)
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
             {currentTab === "Architecture" && renderMarkdown(architectureContent)}
           </div>
         </div>

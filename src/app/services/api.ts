@@ -1,5 +1,5 @@
 // services/api.ts
-// Updated to support improved reset functionality
+// Updated to support improved reset functionality and sketch-based mockup generation
 
 /**
  * Service to handle API calls to the Flask backend
@@ -135,24 +135,59 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
   }
 }
 /**
- * Generate UI/UX mockups using Claude AI based on the masterplan
+ * Generate UI/UX mockups using Claude AI based on the masterplan and sketches
  * @param masterplan The masterplan content to use for mockup generation
+ * @param sketches Array of drawing elements from Excalidraw
  * @returns The response from the API with mockup content
  */
-export async function generateMockups(masterplan?: string): Promise<{ 
+export async function generateMockups(
+  masterplan?: string, 
+  sketches?: any[][]
+): Promise<{ 
   success: boolean,
   mockups?: Array<{type: string, content: string}>,
   message?: string
 }> {
   try {
     console.log('Requesting mockup generation from Claude AI');
+    console.log(`Sketches provided: ${sketches ? sketches.length : 0}`);
+    
+    // Prepare the request payload
+    const payload: any = { masterplan };
+    
+    // If we have sketches, include them in the request
+    if (sketches && sketches.length > 0) {
+      // We need to convert the Excalidraw elements to a more Claude-friendly format
+      payload.sketches = sketches.map((sketch, index) => {
+        // Get unique types without using Set spread
+        const typeSet = new Set<string>();
+        sketch.forEach(element => {
+          if (element.type) {
+            typeSet.add(element.type);
+          }
+        });
+        
+        // Convert Set to Array using Array.from
+        const types = Array.from(typeSet);
+        
+        return {
+          id: `sketch-${index}`,
+          elementCount: sketch.length,
+          types: types,
+          // Include a textual description of what's in the sketch
+          description: `User sketch ${index+1} with ${sketch.length} elements including ${types.join(', ')}`
+        };
+      });
+      
+      console.log('Processed sketches for API:', payload.sketches);
+    }
     
     const response = await fetch(`${API_BASE_URL}/generate-mockups`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ masterplan }),
+      body: JSON.stringify(payload),
       credentials: 'include', // Important for session cookies
     });
 

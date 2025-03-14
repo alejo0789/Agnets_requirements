@@ -24,6 +24,7 @@ export default function Home() {
     messages,
     currentAgent,
     isLoading,
+    isMockupGenerating,
     error,
     currentRightTab,
     masterplanContent,
@@ -31,12 +32,14 @@ export default function Home() {
     uiUxContent,
     architectureContent,
     hasMasterplan,
+    mockups,
     setCurrentRightTab,
     handleSendMessage,
     handleSubmitDrawing,
     handleResetChat,
     switchAgent,
-    handleExportContent
+    handleExportContent,
+    handleGenerateMockups
   } = useChatMessages();
   
   // Drawing tool
@@ -74,7 +77,7 @@ export default function Home() {
             <AgentSelector 
               currentAgent={currentAgent}
               onAgentChange={switchAgent}
-              isLoading={isLoading}
+              isLoading={isLoading || isMockupGenerating}
             />
           </div>
         </div>
@@ -88,7 +91,7 @@ export default function Home() {
               <button 
                 onClick={handleResetChat}
                 className="text-base px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
-                disabled={isLoading}
+                disabled={isLoading || isMockupGenerating}
               >
                 Reset Chat
               </button>
@@ -98,8 +101,11 @@ export default function Home() {
             <ChatMessages
               messages={messages}
               isLoading={isLoading}
+              isMockupGenerating={isMockupGenerating}
               error={error}
               isClient={isClient}
+              hasMasterplan={hasMasterplan}
+              onGenerateMockups={handleGenerateMockups}
               ref={chatContainerRef}
             />
             
@@ -112,14 +118,14 @@ export default function Home() {
                 onHandleResizeStart={handleDrawingResizeStart}
                 onCancelDrawing={closeDrawingMode}
                 onSubmitDrawing={submitDrawing}
-                isLoading={isLoading}
+                isLoading={isLoading || isMockupGenerating}
               />
             )}
             
             {/* Message input */}
             <MessageInput
               onSendMessage={handleSendMessage}
-              isLoading={isLoading}
+              isLoading={isLoading || isMockupGenerating}
               isDrawingMode={isDrawingMode}
               onToggleDrawingMode={toggleDrawingMode}
             />
@@ -134,6 +140,7 @@ export default function Home() {
             uiUxContent={uiUxContent}
             architectureContent={architectureContent}
             hasMasterplan={hasMasterplan}
+            mockups={mockups}
             onExportContent={handleExportContent}
             panelWidth={panelWidth}
             handleResizeStart={handlePanelResizeStart}

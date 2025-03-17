@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 
-type RightPanelTabType = "Masterplan" | "UI/UX" | "Architecture" | "Requirements";
+type RightPanelTabType = "Requirements" | "UI/UX" | "Architecture";
 
 type MockupType = {
   type: string;
@@ -192,44 +192,51 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     };
 
     // Function to render SVG mockups safely
- // Function to render SVG mockups safely
-const renderSvgMockup = (svgContent: string, index: number) => {
-  try {
-    // Remove any XML declaration that might cause issues
-    let cleanedSvg = svgContent.replace(/<\?xml[^?]*\?>/, '');
-    
-    // Make sure the SVG has proper namespace
-    if (!cleanedSvg.includes('xmlns=')) {
-      cleanedSvg = cleanedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    const renderSvgMockup = (svgContent: string, index: number) => {
+      try {
+        // Remove any XML declaration that might cause issues
+        let cleanedSvg = svgContent.replace(/<\?xml[^?]*\?>/, '');
+        
+        // Make sure the SVG has proper namespace
+        if (!cleanedSvg.includes('xmlns=')) {
+          cleanedSvg = cleanedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        
+        // Create a unique ID for the mockup
+        const mockupId = `mockup-${index}`;
+        
+        // Return in a responsive container
+        return (
+          <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-white shadow-md">
+            <div 
+              id={mockupId}
+              className="svg-container w-full overflow-auto"
+              dangerouslySetInnerHTML={{ __html: cleanedSvg }} 
+            />
+          </div>
+        );
+      } catch (error) {
+        // If there's an error rendering the SVG, show an error message
+        console.error("Error rendering SVG:", error);
+        return (
+          <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-red-50 shadow-md">
+            <p className="text-red-500">Error rendering mockup. SVG content might be invalid.</p>
+            <details>
+              <summary className="cursor-pointer text-sm text-gray-500">View SVG Code</summary>
+              <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{svgContent}</pre>
+            </details>
+          </div>
+        );
+      }
     }
-    
-    // Create a unique ID for the mockup
-    const mockupId = `mockup-${index}`;
-    
-    // Return in a responsive container
-    return (
-      <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-white shadow-md">
-        <div 
-          id={mockupId}
-          className="svg-container w-full overflow-auto"
-          dangerouslySetInnerHTML={{ __html: cleanedSvg }} 
-        />
-      </div>
-    );
-  } catch (error) {
-    // If there's an error rendering the SVG, show an error message
-    console.error("Error rendering SVG:", error);
-    return (
-      <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-red-50 shadow-md">
-        <p className="text-red-500">Error rendering mockup. SVG content might be invalid.</p>
-        <details>
-          <summary className="cursor-pointer text-sm text-gray-500">View SVG Code</summary>
-          <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{svgContent}</pre>
-        </details>
-      </div>
-    );
-  }
-}
+
+    // Determine what content to show in the Requirements tab (including masterplan if available)
+    const getRequirementsContent = () => {
+      if (hasMasterplan) {
+        return masterplanContent;
+      }
+      return requirementsContent;
+    };
 
     return (
       <div 
@@ -243,17 +250,6 @@ const renderSvgMockup = (svgContent: string, index: number) => {
         ></div>
         {/* Tab Buttons */}
         <div className="flex border-b">
-          {hasMasterplan && (
-            <button
-              onClick={() => onTabChange("Masterplan")}
-              className={`flex-1 py-4 font-medium text-base transition-colors
-                ${currentTab === "Masterplan" 
-                  ? "border-b-2 border-blue-500 text-blue-600" 
-                  : "text-gray-500 hover:text-gray-700"}`}
-            >
-              Masterplan
-            </button>
-          )}
           <button
             onClick={() => onTabChange("Requirements")}
             className={`flex-1 py-4 font-medium text-base transition-colors
@@ -261,7 +257,7 @@ const renderSvgMockup = (svgContent: string, index: number) => {
                 ? "border-b-2 border-blue-500 text-blue-600" 
                 : "text-gray-500 hover:text-gray-700"}`}
           >
-            Requirements
+            {hasMasterplan ? "Masterplan" : "Requirements"}
           </button>
           <button
             onClick={() => onTabChange("UI/UX")}
@@ -286,8 +282,7 @@ const renderSvgMockup = (svgContent: string, index: number) => {
         {/* Tab Content */}
         <div className="flex-1 p-5 overflow-y-auto" ref={ref}>
           <div className="prose prose-lg max-w-none">
-            {currentTab === "Masterplan" && renderMarkdown(masterplanContent)}
-            {currentTab === "Requirements" && renderMarkdown(requirementsContent)}
+            {currentTab === "Requirements" && renderMarkdown(getRequirementsContent())}
             {currentTab === "UI/UX" && (
               <>
                 {renderMarkdown(uiUxContent)}
@@ -314,7 +309,7 @@ const renderSvgMockup = (svgContent: string, index: number) => {
               className="bg-gray-200 hover:bg-gray-300 px-5 py-3 rounded text-base font-medium"
               onClick={onExportContent}
             >
-              Export {currentTab}
+              Export {currentTab === "Requirements" && hasMasterplan ? "Masterplan" : currentTab}
             </button>
             <button className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-3 rounded text-base font-medium">
               Save Project

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, forwardRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useChatMessages } from './hooks/useChatMessages';
 import { useDrawingTool } from './hooks/useDrawingTool';
 import { useClientSide } from './hooks/useClientSide';
@@ -10,22 +10,6 @@ import ChatDrawingTool from './components/ChatDrawingTool';
 import ChatMessages from './components/ChatMessages';
 import RightPanel from './components/RightPanel';
 import AgentSelector from './components/AgentSelector';
-import type { RightPanelTabType, MockupType } from './hooks/useChatMessages';
-
-// Define the props interface for RightPanel
-interface RightPanelProps {
-  currentTab: RightPanelTabType;
-  onTabChange: (tab: RightPanelTabType) => void;
-  masterplanContent: string;
-  requirementsContent: string;
-  uiUxContent: string;
-  architectureContent: string;
-  hasMasterplan: boolean;
-  mockups: MockupType[];
-  onExportContent: () => void;
-  panelWidth: number;
-  handleResizeStart: (e: React.MouseEvent) => void;
-}
 
 export default function Home() {
   // Refs for scrolling
@@ -70,32 +54,32 @@ export default function Home() {
     closeDrawingMode
   } = useDrawingTool(handleSubmitDrawing);
 
-  // Resizable panel
+  // Resizable panel - use percentage instead of direct window reference
   const {
     panelWidth,
     handleResizeStart: handlePanelResizeStart,
     isResizing
-  } = useResizablePanel(window.innerWidth * 0.40); // Start with 40% of window width
+  } = useResizablePanel(40); // Use 40% as default width percentage
 
-  // Ensure chat scrolls to bottom when messages update
-  if (chatContainerRef.current) {
-    chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-  }
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  // Prepare right panel props to avoid type errors
-  const rightPanelProps: RightPanelProps = {
-    currentTab: currentRightTab,
-    onTabChange: setCurrentRightTab,
-    masterplanContent,
-    requirementsContent,
-    uiUxContent,
-    architectureContent,
-    hasMasterplan,
-    mockups,
-    onExportContent: handleExportContent,
-    panelWidth,
-    handleResizeStart: handlePanelResizeStart
-  };
+  // Add a class to the body when drawing mode is active
+  useEffect(() => {
+    if (isDrawingMode) {
+      document.body.classList.add('drawing-mode-active');
+    } else {
+      document.body.classList.remove('drawing-mode-active');
+    }
+    
+    return () => {
+      document.body.classList.remove('drawing-mode-active');
+    };
+  }, [isDrawingMode]);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -105,17 +89,19 @@ export default function Home() {
         <div className="bg-white p-5 shadow-md">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">MVP Builder - Sketch Interface</h1>
-            <AgentSelector 
-              currentAgent={currentAgent}
-              onAgentChange={switchAgent}
-              isLoading={isLoading || isMockupGenerating}
-            />
+            {isClient && (
+              <AgentSelector 
+                currentAgent={currentAgent}
+                onAgentChange={switchAgent}
+                isLoading={isLoading || isMockupGenerating}
+              />
+            )}
           </div>
         </div>
         
-        {/* Main workspace with improved spacing */}
+        {/* Main workspace */}
         <div className="flex-1 flex p-6 gap-16 overflow-hidden">
-          {/* Left panel with more space */}
+          {/* Left panel */}
           <div className="flex-1 bg-white rounded-lg shadow-md flex flex-col h-full overflow-hidden ml-12">
             <div className="p-5 border-b flex justify-between items-center">
               <h2 className="text-2xl font-semibold">{currentAgent} Agent</h2>
@@ -123,22 +109,25 @@ export default function Home() {
                 onClick={handleResetChat}
                 className="text-base px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
                 disabled={isLoading || isMockupGenerating}
+                type="button"
               >
                 Reset Chat
               </button>
             </div>
             
             {/* Chat messages */}
-            <ChatMessages
-              messages={messages}
-              isLoading={isLoading}
-              isMockupGenerating={isMockupGenerating}
-              error={error}
-              isClient={isClient}
-              hasMasterplan={hasMasterplan}
-              onGenerateMockups={handleGenerateMockups}
-              ref={chatContainerRef}
-            />
+            {isClient && (
+              <ChatMessages
+                messages={messages}
+                isLoading={isLoading}
+                isMockupGenerating={isMockupGenerating}
+                error={error}
+                isClient={isClient}
+                hasMasterplan={hasMasterplan}
+                onGenerateMockups={handleGenerateMockups}
+                ref={chatContainerRef}
+              />
+            )}
             
             {/* Drawing tool - appears above the input when in drawing mode */}
             {isDrawingMode && isClient && (
@@ -154,19 +143,33 @@ export default function Home() {
             )}
             
             {/* Message input */}
-            <MessageInput
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading || isMockupGenerating}
-              isDrawingMode={isDrawingMode}
-              onToggleDrawingMode={toggleDrawingMode}
-            />
+            {isClient && (
+              <MessageInput
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading || isMockupGenerating}
+                isDrawingMode={isDrawingMode}
+                onToggleDrawingMode={toggleDrawingMode}
+              />
+            )}
           </div>
           
-          {/* Right Panel with Tabs - Now with properly typed props */}
-          <RightPanel
-            {...rightPanelProps}
-            ref={answerContainerRef}
-          />
+          {/* Right Panel with Tabs */}
+          {isClient && !isDrawingMode && (
+            <RightPanel
+              currentTab={currentRightTab}
+              onTabChange={setCurrentRightTab}
+              masterplanContent={masterplanContent}
+              requirementsContent={requirementsContent}
+              uiUxContent={uiUxContent}
+              architectureContent={architectureContent}
+              hasMasterplan={hasMasterplan}
+              mockups={mockups}
+              onExportContent={handleExportContent}
+              panelWidth={panelWidth}
+              handleResizeStart={handlePanelResizeStart}
+              ref={answerContainerRef}
+            />
+          )}
         </div>
       </div>
     </div>

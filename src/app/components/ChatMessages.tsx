@@ -20,7 +20,7 @@ type MessageType = {
   sender: "user" | "agent";
   content: string;
   timestamp: Date;
-  drawingElements?: readonly ExcalidrawElement[]; // Updated to readonly
+  drawingElements?: ExcalidrawElement[];
 };
 
 interface ChatMessagesProps {
@@ -151,10 +151,11 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
                                 elements: message.drawingElements,
                                 appState: { 
                                   viewBackgroundColor: "#ffffff",
-                                  viewModeEnabled: true  // Changed from 'readOnly' to 'viewModeEnabled'
+                                
                                 },
                                 scrollToContent: true
                               }}
+                              viewModeEnabled={true}
                             />
                           )}
                         </div>

@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
-import type { RightPanelTabType } from '../hooks/useChatMessages';
+
+type RightPanelTabType = "Requirements" | "UI/UX" | "Architecture";
 
 type MockupType = {
   type: string;
@@ -237,9 +238,12 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
       return requirementsContent;
     };
 
+    // Use a default width if panelWidth is 0 (initial state)
+    const effectiveWidth = panelWidth || 400; // Default to 400px if not set yet
+
     return (
       <div 
-        style={{ width: `${panelWidth}px` }} 
+        style={{ width: `${effectiveWidth}px` }} 
         className="relative bg-white rounded-lg shadow-md flex flex-col h-full overflow-hidden"
       >
         {/* Resizable handle */}

@@ -7,11 +7,11 @@ type MessageType = {
   sender: "user" | "agent";
   content: string;
   timestamp: Date;
-  drawingElements?: any[];
+  drawingElements?: ExcalidrawElement[];
 };
 
 type AgentType = "Requirements" | "UI/UX" | "Frontend" | "Database" | "Backend";
-type RightPanelTabType = "Masterplan" | "UI/UX" | "Architecture" | "Requirements";
+type RightPanelTabType = "Requirements" | "UI/UX" | "Architecture";
 type MockupType = {
   type: string;
   content: string;
@@ -49,7 +49,7 @@ export const useChatMessages = () => {
   const [isMockupGenerating, setIsMockupGenerating] = useState(false);
   
   // Store submitted sketches
-  const [submittedSketches, setSubmittedSketches] = useState<any[][]>([]);
+  const [submittedSketches, setSubmittedSketches] = useState<ExcalidrawElement[][]>([]);
 
   // Reset the chat session but maintain right panel content
   const handleResetChat = async () => {
@@ -103,7 +103,7 @@ export const useChatMessages = () => {
           // Save masterplan content and set tab to show it
           setMasterplanContent(masterplanContent);
           setHasMasterplan(true);
-          setCurrentRightTab("Masterplan");
+          setCurrentRightTab("Requirements");
         } else if (!hasMasterplan) {
           // Only update requirements panel if masterplan hasn't been generated yet
           updateRequirementsPanel(newUserMessage.content, apiResponse.response);
@@ -141,7 +141,7 @@ export const useChatMessages = () => {
   };
 
   // Handle submitting a drawing as a message
-  const handleSubmitDrawing = async (drawingElements: readonly ExcalidrawElement[]) => {
+  const handleSubmitDrawing = async (drawingElements: ExcalidrawElement[]) => {
     if (drawingElements.length > 0) {
       try {
         setIsLoading(true);
@@ -180,7 +180,7 @@ export const useChatMessages = () => {
         if (masterplanContent) {
           setMasterplanContent(masterplanContent);
           setHasMasterplan(true);
-          setCurrentRightTab("Masterplan");
+          setCurrentRightTab("Requirements");
         } else if (!hasMasterplan) {
           // Update requirements panel to include sketch information
           setRequirementsContent(prev => `${prev}\n\n## UI Mockup\n- User provided a sketch for the interface layout`);
@@ -227,7 +227,7 @@ export const useChatMessages = () => {
       } else if (agent === "Backend" || agent === "Frontend" || agent === "Database") {
         setCurrentRightTab("Architecture");
       } else if (agent === "Requirements") {
-        setCurrentRightTab(hasMasterplan ? "Masterplan" : "Requirements");
+        setCurrentRightTab(hasMasterplan ? "Requirements" : "Requirements");
       }
       
     } catch (err: any) {
@@ -429,13 +429,9 @@ export const useChatMessages = () => {
     
     // Get content based on current tab
     switch (currentRightTab) {
-      case "Masterplan":
-        content = masterplanContent;
-        filename = "masterplan.md";
-        break;
       case "Requirements":
-        content = requirementsContent;
-        filename = "requirements.md";
+        content = hasMasterplan ? masterplanContent : requirementsContent;
+        filename = hasMasterplan ? "masterplan.md" : "requirements.md";
         break;
       case "Architecture":
         content = architectureContent;

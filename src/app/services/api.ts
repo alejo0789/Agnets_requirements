@@ -1,5 +1,5 @@
 // services/api.ts
-// Updated to support improved reset functionality and sketch-based mockup generation
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
 /**
  * Service to handle API calls to the Flask backend
@@ -134,6 +134,7 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
     throw error;
   }
 }
+
 /**
  * Generate UI/UX mockups using Claude AI based on the masterplan and sketches
  * @param masterplan The masterplan content to use for mockup generation
@@ -142,7 +143,7 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
  */
 export async function generateMockups(
   masterplan?: string, 
-  sketches?: any[][]
+  sketches?: ExcalidrawElement[][]
 ): Promise<{ 
   success: boolean,
   mockups?: Array<{type: string, content: string}>,

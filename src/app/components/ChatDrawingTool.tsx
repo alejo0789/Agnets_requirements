@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, memo } from 'react';
 import dynamic from 'next/dynamic';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+import type { AppState } from '@excalidraw/excalidraw/types/types';
 
 // Import Excalidraw dynamically to prevent SSR issues
 const Excalidraw = dynamic(
@@ -18,14 +19,15 @@ const Excalidraw = dynamic(
 interface ChatDrawingToolProps {
   isClient: boolean;
   drawingHeight: number;
-  onDrawingChange: (elements: readonly ExcalidrawElement[]) => void; // Updated type here
+  onDrawingChange: (elements: readonly ExcalidrawElement[]) => void;
   onHandleResizeStart: (e: React.MouseEvent) => void;
   onCancelDrawing: () => void;
   onSubmitDrawing: () => void;
   isLoading: boolean;
 }
 
-const ChatDrawingTool = ({
+// Use React.memo to prevent unnecessary re-renders
+const ChatDrawingTool = memo(({
   isClient,
   drawingHeight,
   onDrawingChange,
@@ -34,6 +36,26 @@ const ChatDrawingTool = ({
   onSubmitDrawing,
   isLoading
 }: ChatDrawingToolProps) => {
+  // Use ref to track the initial render
+  const isInitialRender = useRef(true);
+  
+  // A stable onChange handler that won't cause infinite updates
+  const handleExcalidrawChange = (
+    elements: readonly ExcalidrawElement[],
+    appState: AppState
+  ) => {
+    // Skip the first onChange event which happens on initial render
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+    
+    // Only trigger updates when elements actually change
+    if (elements && elements.length > 0) {
+      onDrawingChange(elements);
+    }
+  };
+  
   return (
     <div className="p-2 border-t">
       <div className="bg-gray-50 border rounded-lg p-2 relative">
@@ -52,7 +74,7 @@ const ChatDrawingTool = ({
         >
           {isClient && (
             <Excalidraw
-              onChange={onDrawingChange}
+              onChange={handleExcalidrawChange}
               initialData={{
                 appState: { 
                   viewBackgroundColor: "#ffffff",
@@ -69,13 +91,15 @@ const ChatDrawingTool = ({
           <button
             className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mr-2"
             onClick={onCancelDrawing}
+            type="button"
           >
             Cancel
           </button>
           <button
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+            className={`${isLoading ? 'bg-green-400' : 'bg-green-500 hover:bg-green-600'} text-white px-4 py-2 rounded`}
             onClick={onSubmitDrawing}
             disabled={isLoading}
+            type="button"
           >
             Send Sketch
           </button>
@@ -83,6 +107,9 @@ const ChatDrawingTool = ({
       </div>
     </div>
   );
-};
+});
+
+// Add display name for debugging
+ChatDrawingTool.displayName = 'ChatDrawingTool';
 
 export default ChatDrawingTool;

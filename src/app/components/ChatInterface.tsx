@@ -22,11 +22,11 @@ export default function ChatInterface({ messages, onSendMessage, currentAgent }:
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <h2 className="text-xl font-semibold">{currentAgent} Agent</h2>
+      <div className="p-3 border-b">
+        <h2 className="text-lg font-semibold">{currentAgent} Agent</h2>
       </div>
       
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
+      <div className="flex-1 p-3 overflow-y-auto space-y-3">
         {messages.map((message) => (
           message.sender === 'user' ? (
             <UserMessage key={message.id} content={message.content} />
@@ -36,23 +36,23 @@ export default function ChatInterface({ messages, onSendMessage, currentAgent }:
         ))}
       </div>
       
-      <form onSubmit={handleSubmit} className="p-4 border-t flex">
+      <form onSubmit={handleSubmit} className="p-3 border-t flex">
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="Type your message here..."
-          className="flex-1 p-2 border rounded-lg mr-2"
+          className="flex-1 p-2 border rounded-lg mr-2 text-sm"
         />
         <button 
           type="submit"
-          className="bg-blue-500 text-white rounded-full p-2 w-10 h-10 flex items-center justify-center"
+          className="bg-blue-500 text-white rounded-full p-1 w-8 h-8 flex items-center justify-center"
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             viewBox="0 0 24 24" 
             fill="currentColor" 
-            className="w-6 h-6"
+            className="w-5 h-5"
           >
             <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
           </svg>

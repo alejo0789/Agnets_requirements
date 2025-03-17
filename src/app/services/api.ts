@@ -206,4 +206,10 @@ export async function generateMockups(
     console.error('Error generating mockups:', error);
     throw error;
   }
+  
 }
+
+
+
+
+

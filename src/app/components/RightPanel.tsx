@@ -79,7 +79,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           // Close any open list
           if (inList) {
             result.push(
-              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+              <ul key={`list-${i}`} className="my-2 pl-6 list-disc">
                 {currentListItems}
               </ul>
             );
@@ -88,7 +88,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           }
           
           result.push(
-            <h1 key={i} className="text-3xl font-bold mt-6 mb-3">
+            <h1 key={i} className="text-xl font-bold mt-4 mb-2">
               {line.substring(2)}
             </h1>
           );
@@ -97,7 +97,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           // Close any open list
           if (inList) {
             result.push(
-              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+              <ul key={`list-${i}`} className="my-2 pl-6 list-disc">
                 {currentListItems}
               </ul>
             );
@@ -106,7 +106,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           }
           
           result.push(
-            <h2 key={i} className="text-2xl font-semibold mt-5 mb-2">
+            <h2 key={i} className="text-lg font-semibold mt-3 mb-2">
               {line.substring(3)}
             </h2>
           );
@@ -115,7 +115,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           // Close any open list
           if (inList) {
             result.push(
-              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+              <ul key={`list-${i}`} className="my-2 pl-6 list-disc">
                 {currentListItems}
               </ul>
             );
@@ -124,7 +124,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           }
           
           result.push(
-            <h3 key={i} className="text-xl font-semibold mt-4 mb-2">
+            <h3 key={i} className="text-base font-semibold mt-3 mb-1">
               {line.substring(4)}
             </h3>
           );
@@ -137,7 +137,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           const content = line.replace(/^\s*[\*\-]\s+/, '');
           
           currentListItems.push(
-            <li key={`item-${i}`} className="my-2">
+            <li key={`item-${i}`} className="my-1 text-sm">
               {formatInlineMarkdown(content)}
             </li>
           );
@@ -147,7 +147,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           // Close any open list
           if (inList) {
             result.push(
-              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+              <ul key={`list-${i}`} className="my-2 pl-6 list-disc">
                 {currentListItems}
               </ul>
             );
@@ -156,14 +156,14 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           }
           
           // Add spacing between paragraphs
-          result.push(<div key={i} className="h-3"></div>);
+          result.push(<div key={i} className="h-2"></div>);
         }
         // Regular paragraph text
         else {
           // Close any open list
           if (inList) {
             result.push(
-              <ul key={`list-${i}`} className="my-4 pl-8 list-disc">
+              <ul key={`list-${i}`} className="my-2 pl-6 list-disc">
                 {currentListItems}
               </ul>
             );
@@ -172,7 +172,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           }
           
           result.push(
-            <p key={i} className="my-3 text-lg">
+            <p key={i} className="my-2 text-sm">
               {formatInlineMarkdown(line)}
             </p>
           );
@@ -182,7 +182,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
       // Close any open list at the end of processing
       if (inList) {
         result.push(
-          <ul key="final-list" className="my-4 pl-8 list-disc">
+          <ul key="final-list" className="my-2 pl-6 list-disc">
             {currentListItems}
           </ul>
         );
@@ -207,7 +207,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         
         // Return in a responsive container
         return (
-          <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-white shadow-md">
+          <div key={`svg-mockup-${index}`} className="my-4 border rounded-lg p-3 bg-white shadow-sm">
             <div 
               id={mockupId}
               className="svg-container w-full overflow-auto"
@@ -219,10 +219,10 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         // If there's an error rendering the SVG, show an error message
         console.error("Error rendering SVG:", error);
         return (
-          <div key={`svg-mockup-${index}`} className="my-8 border rounded-lg p-4 bg-red-50 shadow-md">
-            <p className="text-red-500">Error rendering mockup. SVG content might be invalid.</p>
+          <div key={`svg-mockup-${index}`} className="my-4 border rounded-lg p-3 bg-red-50 shadow-sm">
+            <p className="text-red-500 text-sm">Error rendering mockup. SVG content might be invalid.</p>
             <details>
-              <summary className="cursor-pointer text-sm text-gray-500">View SVG Code</summary>
+              <summary className="cursor-pointer text-xs text-gray-500">View SVG Code</summary>
               <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{svgContent}</pre>
             </details>
           </div>
@@ -236,6 +236,40 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         return masterplanContent;
       }
       return requirementsContent;
+    };
+
+    // Handle showing mockups
+    const renderMockups = () => {
+      if (mockups.length > 0) {
+        return (
+          <div className="mt-4">
+            <h2 className="text-lg font-semibold mb-3">UI/UX Mockups</h2>
+            {mockups.map((mockup, index) => (
+              mockup.type === 'svg' && renderSvgMockup(mockup.content, index)
+            ))}
+          </div>
+        );
+      }
+      return null;
+    };
+
+    // Get the content to display based on the tab
+    const getTabContent = () => {
+      switch (currentTab) {
+        case "Requirements":
+          return renderMarkdown(getRequirementsContent());
+        case "UI/UX":
+          return (
+            <>
+              {renderMarkdown(uiUxContent)}
+              {renderMockups()}
+            </>
+          );
+        case "Architecture":
+          return renderMarkdown(architectureContent);
+        default:
+          return null;
+      }
     };
 
     // Use a default width if panelWidth is 0 (initial state)
@@ -255,7 +289,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         <div className="flex border-b">
           <button
             onClick={() => onTabChange("Requirements")}
-            className={`flex-1 py-4 font-medium text-base transition-colors
+            className={`flex-1 py-2 font-medium text-sm transition-colors
               ${currentTab === "Requirements" 
                 ? "border-b-2 border-blue-500 text-blue-600" 
                 : "text-gray-500 hover:text-gray-700"}`}
@@ -264,7 +298,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           </button>
           <button
             onClick={() => onTabChange("UI/UX")}
-            className={`flex-1 py-4 font-medium text-base transition-colors
+            className={`flex-1 py-2 font-medium text-sm transition-colors
               ${currentTab === "UI/UX" 
                 ? "border-b-2 border-blue-500 text-blue-600" 
                 : "text-gray-500 hover:text-gray-700"}`}
@@ -273,7 +307,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           </button>
           <button
             onClick={() => onTabChange("Architecture")}
-            className={`flex-1 py-4 font-medium text-base transition-colors
+            className={`flex-1 py-2 font-medium text-sm transition-colors
               ${currentTab === "Architecture" 
                 ? "border-b-2 border-blue-500 text-blue-600" 
                 : "text-gray-500 hover:text-gray-700"}`}
@@ -283,38 +317,22 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         </div>
         
         {/* Tab Content */}
-        <div className="flex-1 p-5 overflow-y-auto" ref={ref}>
-          <div className="prose prose-lg max-w-none">
-            {currentTab === "Requirements" && renderMarkdown(getRequirementsContent())}
-            {currentTab === "UI/UX" && (
-              <>
-                {renderMarkdown(uiUxContent)}
-                
-                {/* Render SVG mockups if available */}
-                {mockups.length > 0 && (
-                  <div className="mt-8">
-                    <h2 className="text-2xl font-semibold mb-4">UI/UX Mockups</h2>
-                    {mockups.map((mockup, index) => (
-                      mockup.type === 'svg' && renderSvgMockup(mockup.content, index)
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-            {currentTab === "Architecture" && renderMarkdown(architectureContent)}
+        <div className="flex-1 p-4 overflow-y-auto" ref={ref}>
+          <div className="prose prose-sm max-w-none">
+            {getTabContent()}
           </div>
         </div>
         
         {/* Action buttons */}
-        <div className="p-4 border-t">
+        <div className="p-3 border-t">
           <div className="flex justify-between">
             <button 
-              className="bg-gray-200 hover:bg-gray-300 px-5 py-3 rounded text-base font-medium"
+              className="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded text-sm font-medium"
               onClick={onExportContent}
             >
               Export {currentTab === "Requirements" && hasMasterplan ? "Masterplan" : currentTab}
             </button>
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-3 rounded text-base font-medium">
+            <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium">
               Save Project
             </button>
           </div>

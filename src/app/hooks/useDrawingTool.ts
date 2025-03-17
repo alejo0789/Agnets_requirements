@@ -8,7 +8,7 @@ export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) 
   
   // For resizing
   const [isResizing, setIsResizing] = useState(false);
-  const [drawingHeight, setDrawingHeight] = useState(250);
+  const [drawingHeight, setDrawingHeight] = useState(250); // Default initial height
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
   
@@ -100,9 +100,10 @@ export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) 
   // Toggle drawing mode - memoize to prevent recreation
   const toggleDrawingMode = useCallback(() => {
     setIsDrawingMode(prevMode => {
-      // Reset drawing height when entering drawing mode
+      // When entering drawing mode, set initial height to 55% of viewport height
       if (!prevMode) {
-        setDrawingHeight(250);
+        const initialHeight = window.innerHeight * 0.55;
+        setDrawingHeight(initialHeight);
       }
       return !prevMode;
     });

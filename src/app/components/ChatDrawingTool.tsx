@@ -1,4 +1,4 @@
-import React, { useRef, memo } from 'react';
+import React, { useRef, memo, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 import type { AppState } from '@excalidraw/excalidraw/types/types';
@@ -38,23 +38,38 @@ const ChatDrawingTool = memo(({
 }: ChatDrawingToolProps) => {
   // Use ref to track the initial render
   const isInitialRender = useRef(true);
+  const excalidrawRef = useRef<any>(null);
+  
+  // Initial app state with locked tool settings to prevent reverting to selection tool
+  const [appState] = useState<Partial<AppState>>({
+    viewBackgroundColor: "#ffffff",
+    currentItemStrokeColor: "#000000",
+    currentItemBackgroundColor: "#ffffff",
+    persistentElementCount: 0,
+    penMode: false,
+    activeTool: {
+      customType: null,
+      locked: true, // This prevents the tool from automatically switching back
+      type: "rectangle"
+    }
+  });
   
   // A stable onChange handler that won't cause infinite updates
-  const handleExcalidrawChange = (
-    elements: readonly ExcalidrawElement[],
-    appState: AppState
-  ) => {
-    // Skip the first onChange event which happens on initial render
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
-    
-    // Only trigger updates when elements actually change
-    if (elements && elements.length > 0) {
-      onDrawingChange(elements);
-    }
-  };
+  const handleExcalidrawChange = useCallback(
+    (elements: readonly ExcalidrawElement[], newAppState: AppState) => {
+      // Skip the first onChange event which happens on initial render
+      if (isInitialRender.current) {
+        isInitialRender.current = false;
+        return;
+      }
+      
+      // Only trigger updates when elements actually change
+      if (elements && elements.length > 0) {
+        onDrawingChange(elements);
+      }
+    },
+    [onDrawingChange]
+  );
   
   return (
     <div className="p-2 border-t">
@@ -74,15 +89,24 @@ const ChatDrawingTool = memo(({
         >
           {isClient && (
             <Excalidraw
+              ref={excalidrawRef}
               onChange={handleExcalidrawChange}
               initialData={{
-                appState: { 
-                  viewBackgroundColor: "#ffffff",
-                  currentItemStrokeColor: "#000000",
-                  currentItemBackgroundColor: "#ffffff"
-                },
+                appState: appState,
                 scrollToContent: true
               }}
+              UIOptions={{
+                canvasActions: {
+                  export: false,
+                  loadScene: false,
+                  saveToActiveFile: false,
+                  saveAsImage: false,
+                  theme: false,
+                  changeViewBackgroundColor: false
+                }
+              }}
+              detectScroll={true}
+              handleKeyboardGlobally={true}
             />
           )}
         </div>

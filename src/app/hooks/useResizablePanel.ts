@@ -11,13 +11,23 @@ export const useResizablePanel = (initialWidthPercentage: number = 40) => {
   
   // Initialize panel width after component mounts (client-side only)
   useEffect(() => {
-    setPanelWidth(window.innerWidth * (initialWidthPercentage / 100));
+    // Only set the initial width when it hasn't been set before or window is resized
+    if (panelWidth === 0) {
+      setPanelWidth(window.innerWidth * (initialWidthPercentage / 100));
+    }
 
     // Handle window resize
     const handleWindowResize = () => {
       // Only resize if not actively being dragged
       if (!isResizing) {
-        setPanelWidth(window.innerWidth * (initialWidthPercentage / 100));
+        setPanelWidth(prevWidth => {
+          // Calculate what percentage of the window the current width represents
+          const currentPercentage = (prevWidth / window.innerWidth) * 100;
+          // Apply that same percentage to the new window width, but
+          // use initialWidthPercentage if prevWidth was 0 (initial state)
+          const percentageToUse = prevWidth === 0 ? initialWidthPercentage : currentPercentage;
+          return window.innerWidth * (percentageToUse / 100);
+        });
       }
     };
 

@@ -14,38 +14,38 @@ const AgentSelector: React.FC<AgentSelectorProps> = ({
   isLoading 
 }) => {
   return (
-    <div className="flex space-x-2">
+    <div className="flex space-x-1">
       <button 
         onClick={() => onAgentChange("Requirements")}
-        className={`px-3 py-1 rounded ${currentAgent === "Requirements" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+        className={`px-2 py-1 rounded text-xs ${currentAgent === "Requirements" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
         disabled={isLoading}
       >
         Requirements
       </button>
       <button 
         onClick={() => onAgentChange("UI/UX")}
-        className={`px-3 py-1 rounded ${currentAgent === "UI/UX" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+        className={`px-2 py-1 rounded text-xs ${currentAgent === "UI/UX" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
         disabled={isLoading}
       >
         UI/UX
       </button>
       <button 
         onClick={() => onAgentChange("Frontend")}
-        className={`px-3 py-1 rounded ${currentAgent === "Frontend" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+        className={`px-2 py-1 rounded text-xs ${currentAgent === "Frontend" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
         disabled={isLoading}
       >
         Frontend
       </button>
       <button 
         onClick={() => onAgentChange("Database")}
-        className={`px-3 py-1 rounded ${currentAgent === "Database" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+        className={`px-2 py-1 rounded text-xs ${currentAgent === "Database" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
         disabled={isLoading}
       >
         Database
       </button>
       <button 
         onClick={() => onAgentChange("Backend")}
-        className={`px-3 py-1 rounded ${currentAgent === "Backend" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+        className={`px-2 py-1 rounded text-xs ${currentAgent === "Backend" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
         disabled={isLoading}
       >
         Backend

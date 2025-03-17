@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
-export const useDrawingTool = (onSubmitDrawing: (elements: any[]) => Promise<void>) => {
+export const useDrawingTool = (onSubmitDrawing: (elements: readonly ExcalidrawElement[]) => Promise<void>) => {
   // Drawing state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [currentDrawingElements, setCurrentDrawingElements] = useState<any[]>([]);
+  const [currentDrawingElements, setCurrentDrawingElements] = useState<readonly ExcalidrawElement[]>([]);
   
   // For resizing
   const [isResizing, setIsResizing] = useState(false);
@@ -55,14 +56,14 @@ export const useDrawingTool = (onSubmitDrawing: (elements: any[]) => Promise<voi
   }, [isResizing]);
   
   // Handle drawing changes
-  const handleDrawingChange = (elements: any[]) => {
+  const handleDrawingChange = (elements: readonly ExcalidrawElement[]) => {
     setCurrentDrawingElements(elements);
   };
 
   // Submit the drawing as a message
   const handleSubmitDrawing = async () => {
     if (currentDrawingElements.length > 0) {
-      await onSubmitDrawing([...currentDrawingElements]);
+      await onSubmitDrawing(currentDrawingElements);
       setCurrentDrawingElements([]);
       setIsDrawingMode(false);
     } else {

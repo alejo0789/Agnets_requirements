@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import dynamic from 'next/dynamic';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
 // Import Excalidraw with dynamic loading to prevent SSR issues
 const Excalidraw = dynamic(
@@ -19,7 +20,7 @@ type MessageType = {
   sender: "user" | "agent";
   content: string;
   timestamp: Date;
-  drawingElements?: any[];
+  drawingElements?: readonly ExcalidrawElement[]; // Updated to readonly
 };
 
 interface ChatMessagesProps {
@@ -150,11 +151,10 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
                                 elements: message.drawingElements,
                                 appState: { 
                                   viewBackgroundColor: "#ffffff",
-                                  readOnly: true
+                                  viewModeEnabled: true  // Changed from 'readOnly' to 'viewModeEnabled'
                                 },
                                 scrollToContent: true
                               }}
-                              viewModeEnabled={true}
                             />
                           )}
                         </div>

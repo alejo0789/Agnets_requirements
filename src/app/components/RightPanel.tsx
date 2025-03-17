@@ -1,6 +1,5 @@
 import React, { forwardRef } from 'react';
-
-type RightPanelTabType = "Requirements" | "UI/UX" | "Architecture";
+import type { RightPanelTabType } from '../hooks/useChatMessages';
 
 type MockupType = {
   type: string;

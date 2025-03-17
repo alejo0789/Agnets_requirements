@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import dynamic from 'next/dynamic';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
 // Import Excalidraw dynamically to prevent SSR issues
 const Excalidraw = dynamic(
@@ -17,7 +18,7 @@ const Excalidraw = dynamic(
 interface ChatDrawingToolProps {
   isClient: boolean;
   drawingHeight: number;
-  onDrawingChange: (elements: any[]) => void;
+  onDrawingChange: (elements: readonly ExcalidrawElement[]) => void; // Updated type here
   onHandleResizeStart: (e: React.MouseEvent) => void;
   onCancelDrawing: () => void;
   onSubmitDrawing: () => void;
@@ -51,7 +52,7 @@ const ChatDrawingTool = ({
         >
           {isClient && (
             <Excalidraw
-              onChange={(elements) => onDrawingChange(elements)}
+              onChange={onDrawingChange}
               initialData={{
                 appState: { 
                   viewBackgroundColor: "#ffffff",

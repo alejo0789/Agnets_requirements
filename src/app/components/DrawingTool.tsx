@@ -1,11 +1,18 @@
 import { useState } from 'react';
+// Make sure to check if this import path matches your project structure
 import ExcalidrawComponent from './ExcalidrawComponent';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types/types';
 
 export default function DrawingTool() {
   const [isExcalidrawVisible, setIsExcalidrawVisible] = useState(false);
-  const [drawingElements, setDrawingElements] = useState<any[]>([]);
+  const [drawingElements, setDrawingElements] = useState<readonly ExcalidrawElement[]>([]);
 
-  const handleDrawingChange = (elements: any[], appState: any) => {
+  const handleDrawingChange = (
+    elements: readonly ExcalidrawElement[], 
+    appState: AppState, 
+    files: BinaryFiles
+  ) => {
     setDrawingElements(elements);
     // You could save the state to localStorage or your backend here
   };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { sendMessage, resetSession, generateMockups } from '../services/api';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
 type MessageType = {
   id: string;
@@ -140,7 +141,7 @@ export const useChatMessages = () => {
   };
 
   // Handle submitting a drawing as a message
-  const handleSubmitDrawing = async (drawingElements: any[]) => {
+  const handleSubmitDrawing = async (drawingElements: readonly ExcalidrawElement[]) => {
     if (drawingElements.length > 0) {
       try {
         setIsLoading(true);

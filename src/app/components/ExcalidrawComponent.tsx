@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types/types';
 
 // Import Excalidraw dynamically with no SSR to avoid server-side rendering issues
 const Excalidraw = dynamic(
@@ -15,9 +17,10 @@ const Excalidraw = dynamic(
 );
 
 interface ExcalidrawComponentProps {
-  onChange?: (elements: any[], appState: any) => void;
+  onChange?: (elements: readonly ExcalidrawElement[], appState: AppState, files: BinaryFiles) => void;
 }
 
+// Make sure to use 'export default' here
 export default function ExcalidrawComponent({ onChange }: ExcalidrawComponentProps) {
   const [isClient, setIsClient] = useState(false);
 
@@ -25,9 +28,13 @@ export default function ExcalidrawComponent({ onChange }: ExcalidrawComponentPro
     setIsClient(true);
   }, []);
 
-  const handleChange = (elements: any[], appState: any) => {
+  const handleChange = (
+    elements: readonly ExcalidrawElement[], 
+    appState: AppState, 
+    files: BinaryFiles
+  ) => {
     if (onChange) {
-      onChange(elements, appState);
+      onChange(elements, appState, files);
     }
   };
 
@@ -45,7 +52,11 @@ export default function ExcalidrawComponent({ onChange }: ExcalidrawComponentPro
         onChange={handleChange}
         gridModeEnabled={false}
         zenModeEnabled={false}
-        viewBackgroundColor="#f8f9fa"
+        initialData={{
+          appState: {
+            viewBackgroundColor: "#f8f9fa"
+          }
+        }}
       />
     </div>
   );

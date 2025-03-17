@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, forwardRef } from 'react';
 import { useChatMessages } from './hooks/useChatMessages';
 import { useDrawingTool } from './hooks/useDrawingTool';
 import { useClientSide } from './hooks/useClientSide';
@@ -10,6 +10,22 @@ import ChatDrawingTool from './components/ChatDrawingTool';
 import ChatMessages from './components/ChatMessages';
 import RightPanel from './components/RightPanel';
 import AgentSelector from './components/AgentSelector';
+import type { RightPanelTabType, MockupType } from './hooks/useChatMessages';
+
+// Define the props interface for RightPanel
+interface RightPanelProps {
+  currentTab: RightPanelTabType;
+  onTabChange: (tab: RightPanelTabType) => void;
+  masterplanContent: string;
+  requirementsContent: string;
+  uiUxContent: string;
+  architectureContent: string;
+  hasMasterplan: boolean;
+  mockups: MockupType[];
+  onExportContent: () => void;
+  panelWidth: number;
+  handleResizeStart: (e: React.MouseEvent) => void;
+}
 
 export default function Home() {
   // Refs for scrolling
@@ -65,6 +81,21 @@ export default function Home() {
   if (chatContainerRef.current) {
     chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
   }
+
+  // Prepare right panel props to avoid type errors
+  const rightPanelProps: RightPanelProps = {
+    currentTab: currentRightTab,
+    onTabChange: setCurrentRightTab,
+    masterplanContent,
+    requirementsContent,
+    uiUxContent,
+    architectureContent,
+    hasMasterplan,
+    mockups,
+    onExportContent: handleExportContent,
+    panelWidth,
+    handleResizeStart: handlePanelResizeStart
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -131,19 +162,9 @@ export default function Home() {
             />
           </div>
           
-          {/* Right Panel with Tabs - Now Resizable with more space between */}
+          {/* Right Panel with Tabs - Now with properly typed props */}
           <RightPanel
-            currentTab={currentRightTab}
-            onTabChange={setCurrentRightTab}
-            masterplanContent={masterplanContent}
-            requirementsContent={requirementsContent}
-            uiUxContent={uiUxContent}
-            architectureContent={architectureContent}
-            hasMasterplan={hasMasterplan}
-            mockups={mockups}
-            onExportContent={handleExportContent}
-            panelWidth={panelWidth}
-            handleResizeStart={handlePanelResizeStart}
+            {...rightPanelProps}
             ref={answerContainerRef}
           />
         </div>

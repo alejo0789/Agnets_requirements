@@ -151,7 +151,7 @@ export default function Home() {
                 onToggleDrawingMode={toggleDrawingMode}
               />
             )}
-          </div
+          </div>
           
           {/* Right Panel with Tabs */}
           {isClient && !isDrawingMode && (

@@ -10,6 +10,7 @@ import ChatDrawingTool from './components/ChatDrawingTool';
 import ChatMessages from './components/ChatMessages';
 import RightPanel from './components/RightPanel';
 import AgentSelector from './components/AgentSelector';
+import { convertDrawingToImage } from './utils/drawingUtils';
 
 export default function Home() {
   // Refs for scrolling
@@ -48,9 +49,12 @@ export default function Home() {
     isDrawingMode,
     drawingHeight,
     currentDrawingElements,
+    previewImage,
+    isGeneratingPreview,
     handleDrawingChange,
     handleResizeStart: handleDrawingResizeStart,
     handleSubmitDrawing: submitDrawing,
+    generatePreview,
     toggleDrawingMode,
     closeDrawingMode
   } = useDrawingTool(handleSubmitDrawing);
@@ -139,7 +143,10 @@ export default function Home() {
                 onHandleResizeStart={handleDrawingResizeStart}
                 onCancelDrawing={closeDrawingMode}
                 onSubmitDrawing={submitDrawing}
+                onGeneratePreview={generatePreview}
                 isLoading={isLoading || isMockupGenerating}
+                previewImage={previewImage}
+                isGeneratingPreview={isGeneratingPreview}
               />
             )}
             

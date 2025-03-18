@@ -1,9 +1,7 @@
-// services/api.ts
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+// src/app/services/api.ts - updated version with image sending capabilities
 
-/**
- * Service to handle API calls to the Flask backend
- */
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+import { convertDrawingToImage, extractBase64FromDataUrl } from '../utils/drawingUtils';
 
 // Base URL for API calls - adjust based on your deployment setup
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -19,7 +17,8 @@ type AgentType = "Requirements" | "UI/UX" | "Frontend" | "Database" | "Backend";
 export async function sendMessage(
   message: string, 
   agentType: AgentType = "Requirements",
-  preserveMasterplan: boolean = true
+  preserveMasterplan: boolean = true,
+  drawingImage?: string // Optional parameter for drawing image
 ): Promise<{ 
   response: string, 
   requirements?: any,
@@ -31,16 +30,24 @@ export async function sendMessage(
   try {
     console.log(`Sending message to ${agentType} agent: ${message.substring(0, 50)}...`);
     
+    const payload: any = { 
+      message,
+      agent_type: agentType,
+      preserve_masterplan: preserveMasterplan
+    };
+    
+    // If drawing image is provided, include it in the payload
+    if (drawingImage) {
+      payload.drawing_image = drawingImage;
+      console.log('Including drawing image in message');
+    }
+    
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        message,
-        agent_type: agentType,
-        preserve_masterplan: preserveMasterplan
-      }),
+      body: JSON.stringify(payload),
       credentials: 'include', // Important for session cookies
     });
 
@@ -66,10 +73,42 @@ export async function sendMessage(
 }
 
 /**
- * Generate a masterplan directly
- * This function explicitly requests a masterplan generation
- * @returns The response from the API with masterplan content
+ * Submit a drawing as a message with the image sent to the backend
+ * @param elements Excalidraw drawing elements
+ * @param message Optional message to accompany the drawing
+ * @param agentType The current agent type
+ * @returns The response from the API
  */
+export async function submitDrawing(
+  elements: ExcalidrawElement[],
+  message: string = "Here is my sketch:",
+  agentType: AgentType = "UI/UX"
+): Promise<{
+  response: string,
+  requirements?: any,
+  masterplan?: string,
+  uiUx?: string
+}> {
+  try {
+    console.log('Converting drawing to image...');
+    
+    // Convert the drawing to an image
+    const imageDataUrl = await convertDrawingToImage(elements);
+    
+    // Extract the base64 content without the data URL prefix
+    const base64Image = extractBase64FromDataUrl(imageDataUrl);
+    
+    console.log('Drawing converted to image, sending to backend...');
+    
+    // Send the message with the drawing image
+    return await sendMessage(message, agentType, true, base64Image);
+  } catch (error) {
+    console.error('Error submitting drawing:', error);
+    throw error;
+  }
+}
+
+// Rest of your API functions remain the same...
 export async function generateMasterplan(): Promise<{ 
   response: string,
   masterplan?: string
@@ -84,11 +123,6 @@ export async function generateMasterplan(): Promise<{
   }
 }
 
-/**
- * Switch to a different agent
- * @param agentType The agent type to switch to
- * @returns The response from the API
- */
 export async function switchAgent(agentType: AgentType): Promise<{ 
   response: string,
   requirements?: any,
@@ -108,11 +142,6 @@ export async function switchAgent(agentType: AgentType): Promise<{
   }
 }
 
-/**
- * Reset the chat session while preserving masterplan content
- * @param preserveMasterplan Whether to preserve masterplan in session
- * @returns A success status
- */
 export async function resetSession(preserveMasterplan: boolean = true): Promise<{ status: string }> {
   try {
     const response = await fetch(`${API_BASE_URL}/reset`, {
@@ -135,12 +164,6 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
   }
 }
 
-/**
- * Generate UI/UX mockups using Claude AI based on the masterplan and sketches
- * @param masterplan The masterplan content to use for mockup generation
- * @param sketches Array of drawing elements from Excalidraw
- * @returns The response from the API with mockup content
- */
 export async function generateMockups(
   masterplan?: string, 
   sketches?: ExcalidrawElement[][]
@@ -156,31 +179,26 @@ export async function generateMockups(
     // Prepare the request payload
     const payload: any = { masterplan };
     
-    // If we have sketches, include them in the request
+    // If we have sketches, convert them to images and include them
     if (sketches && sketches.length > 0) {
-      // We need to convert the Excalidraw elements to a more Claude-friendly format
-      payload.sketches = sketches.map((sketch, index) => {
-        // Get unique types without using Set spread
-        const typeSet = new Set<string>();
-        sketch.forEach(element => {
-          if (element.type) {
-            typeSet.add(element.type);
+      // Convert each sketch to an image
+      const sketchImages = await Promise.all(
+        sketches.map(async (sketch) => {
+          try {
+            const imageDataUrl = await convertDrawingToImage(sketch);
+            return extractBase64FromDataUrl(imageDataUrl);
+          } catch (error) {
+            console.error('Error converting sketch to image:', error);
+            // Return null for failed conversions
+            return null;
           }
-        });
-        
-        // Convert Set to Array using Array.from
-        const types = Array.from(typeSet);
-        
-        return {
-          id: `sketch-${index}`,
-          elementCount: sketch.length,
-          types: types,
-          // Include a textual description of what's in the sketch
-          description: `User sketch ${index+1} with ${sketch.length} elements including ${types.join(', ')}`
-        };
-      });
+        })
+      );
       
-      console.log('Processed sketches for API:', payload.sketches);
+      // Filter out any null values from failed conversions
+      payload.sketch_images = sketchImages.filter(Boolean);
+      
+      console.log(`Converted ${payload.sketch_images.length} sketches to images`);
     }
     
     const response = await fetch(`${API_BASE_URL}/generate-mockups`, {
@@ -208,11 +226,6 @@ export async function generateMockups(
   }
 }
 
-/**
- * Generate system architecture diagram based on masterplan
- * @param masterplan The masterplan content to use for architecture generation
- * @returns The response from the API with architecture diagram content
- */
 export async function generateArchitecture(
   masterplan?: string
 ): Promise<{

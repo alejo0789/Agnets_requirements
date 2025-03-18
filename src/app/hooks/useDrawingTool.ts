@@ -1,10 +1,16 @@
+// src/app/hooks/useDrawingTool.ts
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+import { convertDrawingToImage } from '../utils/drawingUtils';
 
 export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) => Promise<void>) => {
   // Drawing state
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [currentDrawingElements, setCurrentDrawingElements] = useState<ExcalidrawElement[]>([]);
+  
+  // For image preview
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   
   // For resizing
   const [isResizing, setIsResizing] = useState(false);
@@ -78,24 +84,52 @@ export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) 
       // Convert readonly array to regular array by spreading
       setCurrentDrawingElements([...elements]);
       
+      // Reset image preview when drawing changes
+      setPreviewImage(null);
+      
       // Reset flag after update
       setTimeout(() => {
         isUpdatingRef.current = false;
       }, 0);
     }
   }, []);
+  
+  // Generate image preview when requested
+  const generatePreview = useCallback(async () => {
+    if (currentDrawingElements.length > 0 && !previewImage) {
+      try {
+        setIsGeneratingPreview(true);
+        const imageDataUrl = await convertDrawingToImage(currentDrawingElements);
+        setPreviewImage(imageDataUrl);
+      } catch (error) {
+        console.error('Error generating preview:', error);
+      } finally {
+        setIsGeneratingPreview(false);
+      }
+    }
+  }, [currentDrawingElements, previewImage]);
 
   // Submit the drawing as a message - memoize to prevent recreation
   const handleSubmitDrawing = useCallback(async () => {
     if (currentDrawingElements.length > 0) {
-      await onSubmitDrawing([...currentDrawingElements]);
-      setCurrentDrawingElements([]);
-      setIsDrawingMode(false);
+      try {
+        // Generate preview if not already done
+        if (!previewImage && !isGeneratingPreview) {
+          await generatePreview();
+        }
+        
+        await onSubmitDrawing([...currentDrawingElements]);
+        setCurrentDrawingElements([]);
+        setPreviewImage(null);
+        setIsDrawingMode(false);
+      } catch (error) {
+        console.error('Error submitting drawing:', error);
+      }
     } else {
       // If nothing was drawn, just close the drawing mode
       setIsDrawingMode(false);
     }
-  }, [currentDrawingElements, onSubmitDrawing]);
+  }, [currentDrawingElements, onSubmitDrawing, previewImage, isGeneratingPreview, generatePreview]);
 
   // Toggle drawing mode - memoize to prevent recreation
   const toggleDrawingMode = useCallback(() => {
@@ -104,6 +138,9 @@ export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) 
       if (!prevMode) {
         const initialHeight = window.innerHeight * 0.55;
         setDrawingHeight(initialHeight);
+        // Reset preview and elements when opening drawing mode
+        setPreviewImage(null);
+        setCurrentDrawingElements([]);
       }
       return !prevMode;
     });
@@ -112,15 +149,20 @@ export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) 
   // Close drawing mode - memoize to prevent recreation
   const closeDrawingMode = useCallback(() => {
     setIsDrawingMode(false);
+    setPreviewImage(null);
+    setCurrentDrawingElements([]);
   }, []);
 
   return {
     isDrawingMode,
     drawingHeight,
     currentDrawingElements,
+    previewImage,
+    isGeneratingPreview,
     handleDrawingChange,
     handleResizeStart,
     handleSubmitDrawing,
+    generatePreview,
     toggleDrawingMode,
     closeDrawingMode
   };

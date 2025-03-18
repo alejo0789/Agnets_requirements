@@ -1,4 +1,6 @@
+// Updated RightPanel with improved SVG rendering support
 import React, { forwardRef } from 'react';
+import MockupRenderer from './MockupRenderer';
 
 type RightPanelTabType = "Requirements" | "UI/UX" | "Architecture";
 
@@ -193,45 +195,6 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
       return result;
     };
 
-    // Function to render SVG mockups safely
-    const renderSvgContent = (svgContent: string, index: number) => {
-      try {
-        // Remove any XML declaration that might cause issues
-        let cleanedSvg = svgContent.replace(/<\?xml[^?]*\?>/, '');
-        
-        // Make sure the SVG has proper namespace
-        if (!cleanedSvg.includes('xmlns=')) {
-          cleanedSvg = cleanedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-        }
-        
-        // Create a unique ID for the content
-        const contentId = `svg-content-${index}`;
-        
-        // Return in a responsive container
-        return (
-          <div key={`svg-content-${index}`} className="my-4 border rounded-lg p-3 bg-white shadow-sm">
-            <div 
-              id={contentId}
-              className="svg-container w-full overflow-auto"
-              dangerouslySetInnerHTML={{ __html: cleanedSvg }} 
-            />
-          </div>
-        );
-      } catch (error) {
-        // If there's an error rendering the SVG, show an error message
-        console.error("Error rendering SVG:", error);
-        return (
-          <div key={`svg-content-${index}`} className="my-4 border rounded-lg p-3 bg-red-50 shadow-sm">
-            <p className="text-red-500 text-sm">Error rendering content. SVG content might be invalid.</p>
-            <details>
-              <summary className="cursor-pointer text-xs text-gray-500">View SVG Code</summary>
-              <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{svgContent}</pre>
-            </details>
-          </div>
-        );
-      }
-    }
-
     // Determine what content to show in the Requirements tab (including masterplan if available)
     const getRequirementsContent = () => {
       // Only show masterplan if it exists
@@ -241,36 +204,6 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
       
       // Show empty state message if no masterplan
       return "";
-    };
-
-    // Handle showing mockups
-    const renderMockups = () => {
-      if (mockups.length > 0) {
-        return (
-          <div className="mt-4">
-            <h2 className="text-lg font-semibold mb-3">UI/UX Mockups</h2>
-            {mockups.map((mockup, index) => (
-              mockup.type === 'svg' && renderSvgContent(mockup.content, index)
-            ))}
-          </div>
-        );
-      }
-      return null;
-    };
-
-    // Handle showing architecture diagrams
-    const renderArchitectureDiagrams = () => {
-      if (architectureDiagrams && architectureDiagrams.length > 0) {
-        return (
-          <div className="mt-4">
-            <h2 className="text-lg font-semibold mb-3">Architecture Diagram</h2>
-            {architectureDiagrams.map((diagram, index) => (
-              diagram.type === 'svg' && renderSvgContent(diagram.content, index)
-            ))}
-          </div>
-        );
-      }
-      return null;
     };
 
     // Get the content to display based on the tab
@@ -296,7 +229,12 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
             return (
               <>
                 {uiUxContent.trim() && renderMarkdown(uiUxContent)}
-                {renderMockups()}
+                {mockups.length > 0 && (
+                  <div className="mt-4">
+                    <h2 className="text-lg font-semibold mb-3">UI/UX Mockups</h2>
+                    <MockupRenderer mockups={mockups} />
+                  </div>
+                )}
               </>
             );
           } else {
@@ -315,7 +253,12 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
             return (
               <>
                 {architectureContent.trim() && renderMarkdown(architectureContent)}
-                {renderArchitectureDiagrams()}
+                {architectureDiagrams.length > 0 && (
+                  <div className="mt-4">
+                    <h2 className="text-lg font-semibold mb-3">Architecture Diagrams</h2>
+                    <MockupRenderer mockups={architectureDiagrams} />
+                  </div>
+                )}
               </>
             );
           } else {

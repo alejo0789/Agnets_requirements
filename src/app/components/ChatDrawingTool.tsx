@@ -1,3 +1,4 @@
+// src/app/components/ChatDrawingTool.tsx
 import React, { useRef, memo } from 'react';
 import dynamic from 'next/dynamic';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
@@ -23,7 +24,10 @@ interface ChatDrawingToolProps {
   onHandleResizeStart: (e: React.MouseEvent) => void;
   onCancelDrawing: () => void;
   onSubmitDrawing: () => void;
+  onGeneratePreview: () => void;
   isLoading: boolean;
+  previewImage: string | null;
+  isGeneratingPreview: boolean;
 }
 
 // Use React.memo to prevent unnecessary re-renders
@@ -34,7 +38,10 @@ const ChatDrawingTool = memo(({
   onHandleResizeStart,
   onCancelDrawing,
   onSubmitDrawing,
-  isLoading
+  onGeneratePreview,
+  isLoading,
+  previewImage,
+  isGeneratingPreview
 }: ChatDrawingToolProps) => {
   // Use ref to track the initial render
   const isInitialRender = useRef(true);
@@ -87,22 +94,50 @@ const ChatDrawingTool = memo(({
           )}
         </div>
         
-        <div className="flex justify-end mt-2">
-          <button
-            className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mr-2"
-            onClick={onCancelDrawing}
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            className={`${isLoading ? 'bg-green-400' : 'bg-green-500 hover:bg-green-600'} text-white px-4 py-2 rounded`}
-            onClick={onSubmitDrawing}
-            disabled={isLoading}
-            type="button"
-          >
-            Send Sketch
-          </button>
+        {/* Preview area - shown when preview is generated */}
+        {previewImage && (
+          <div className="mt-4 p-2 border rounded-lg bg-white">
+            <h3 className="font-medium text-sm mb-2">Image Preview:</h3>
+            <div className="max-h-60 overflow-auto flex justify-center">
+              <img 
+                src={previewImage} 
+                alt="Drawing preview" 
+                className="max-w-full object-contain border" 
+              />
+            </div>
+          </div>
+        )}
+        
+        <div className="flex justify-between mt-4">
+          <div>
+            <button
+              className={`${isGeneratingPreview ? 'bg-gray-400 cursor-wait' : 'bg-gray-300 hover:bg-gray-400'} px-4 py-2 rounded text-sm`}
+              onClick={onGeneratePreview}
+              type="button"
+              disabled={isGeneratingPreview || isLoading}
+            >
+              {isGeneratingPreview ? 'Generating...' : 'Preview'}
+            </button>
+          </div>
+          
+          <div className="flex">
+            <button
+              className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mr-2 text-sm"
+              onClick={onCancelDrawing}
+              type="button"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              className={`${isLoading ? 'bg-green-400 cursor-wait' : 'bg-green-500 hover:bg-green-600'} text-white px-4 py-2 rounded text-sm`}
+              onClick={onSubmitDrawing}
+              disabled={isLoading}
+              type="button"
+            >
+              Send Sketch
+            </button>
+          </div>
         </div>
       </div>
     </div>

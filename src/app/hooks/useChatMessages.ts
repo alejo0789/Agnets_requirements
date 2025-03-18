@@ -301,6 +301,52 @@ export const useChatMessages = () => {
     }
   };
 
+  // Generate architecture diagram without changing the tab
+  const generateArchitectureInBackground = async () => {
+    if (!masterplanContent) return;
+
+    try {
+      setIsArchitectureGenerating(true);
+      
+      // Generate architecture diagrams
+      const response = await generateArchitecture(masterplanContent);
+      
+      if (response.success && response.diagrams) {
+        // Save the architecture diagrams
+        setArchitectureDiagrams(response.diagrams);
+        
+        // Update the Architecture content with the text descriptions
+        let architectureUpdatedContent = architectureContent + "\n\n## System Architecture\n\n";
+        
+        response.diagrams.forEach((diagram, index) => {
+          if (diagram.type === 'text') {
+            architectureUpdatedContent += diagram.content + "\n\n";
+          }
+        });
+        
+        setArchitectureContent(architectureUpdatedContent);
+        
+        // Add a message from the agent about architecture but don't switch tabs
+        const architectureMessage: MessageType = {
+          id: Date.now().toString(),
+          sender: 'agent',
+          content: "I've also generated a system architecture diagram based on the masterplan. You can view it in the Architecture tab when you're done reviewing the UI/UX mockups.",
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, architectureMessage]);
+        
+        // Do NOT switch tabs here - this is the key change
+        // setCurrentRightTab("Architecture"); <- This line is removed
+      }
+    } catch (err: any) {
+      console.error("Error generating architecture in background:", err.message);
+      // Don't show this error to the user since it's a background task
+    } finally {
+      setIsArchitectureGenerating(false);
+    }
+  };
+
   // Handle generating mockups based on masterplan and sketches
   const handleGenerateMockups = async () => {
     if (!masterplanContent) {
@@ -367,8 +413,10 @@ export const useChatMessages = () => {
           prev.map(msg => msg.id === processingMessage.id ? successMessage : msg)
         );
         
-        // Also generate architecture diagrams after mockups
-        handleGenerateArchitecture();
+        // Also generate architecture diagrams after mockups, but don't change the tab
+        // This is the key change: we'll generate architecture diagrams in the background
+        // without changing the tab
+        generateArchitectureInBackground();
       } else {
         throw new Error(response.message || "Failed to generate mockups");
       }

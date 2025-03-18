@@ -233,7 +233,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           if (uiUxContent.trim() || mockups.length > 0) {
             return (
               <>
-                {uiUxContent.trim() && renderMarkdown(uiUxContent)}
+            
                 
                 {mockups.length > 0 && (
                   <div className="mt-4">
@@ -269,7 +269,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
                 )}
                 
                 {/* Then display any architecture-specific textual content */}
-                {architectureContent && architectureContent.trim() && renderMarkdown(architectureContent)}
+             
               </>
             );
           } else {

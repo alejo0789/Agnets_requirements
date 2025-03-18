@@ -202,7 +202,12 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         return masterplanContent;
       }
       
-      // Show empty state message if no masterplan
+      // If no masterplan, but we have requirements content
+      if (requirementsContent.trim()) {
+        return requirementsContent;
+      }
+      
+      // Show empty state message if no content
       return "";
     };
 
@@ -228,6 +233,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           if (uiUxContent.trim() || mockups.length > 0) {
             return (
               <>
+                {uiUxContent.trim() && renderMarkdown(uiUxContent)}
                 
                 {mockups.length > 0 && (
                   <div className="mt-4">
@@ -249,16 +255,21 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
             );
           }
         case "Architecture":
-          if (architectureContent.trim() || (architectureDiagrams && architectureDiagrams.length > 0)) {
+          // Only show architecture-specific content, not the masterplan
+          if ((architectureContent && architectureContent.trim()) || 
+              (architectureDiagrams && architectureDiagrams.length > 0)) {
             return (
               <>
-                {architectureContent.trim() && renderMarkdown(architectureContent)}
-                {architectureDiagrams.length > 0 && (
-                  <div className="mt-4">
-                    <h2 className="text-lg font-semibold mb-3">Architecture Diagrams</h2>
+                {/* Display architecture diagrams first for better visibility */}
+                {architectureDiagrams && architectureDiagrams.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold mb-3">System Architecture Diagram</h2>
                     <MockupRenderer mockups={architectureDiagrams} />
                   </div>
                 )}
+                
+                {/* Then display any architecture-specific textual content */}
+                {architectureContent && architectureContent.trim() && renderMarkdown(architectureContent)}
               </>
             );
           } else {

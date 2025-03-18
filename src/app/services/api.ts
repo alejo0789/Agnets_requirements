@@ -206,10 +206,47 @@ export async function generateMockups(
     console.error('Error generating mockups:', error);
     throw error;
   }
-  
 }
 
+/**
+ * Generate system architecture diagram based on masterplan
+ * @param masterplan The masterplan content to use for architecture generation
+ * @returns The response from the API with architecture diagram content
+ */
+export async function generateArchitecture(
+  masterplan?: string
+): Promise<{
+  success: boolean,
+  diagrams?: Array<{type: string, content: string}>,
+  message?: string
+}> {
+  try {
+    console.log('Requesting architecture diagram generation');
+    
+    // Prepare the request payload
+    const payload: any = { masterplan };
+    
+    const response = await fetch(`${API_BASE_URL}/generate-architecture`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      credentials: 'include', // Important for session cookies
+    });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API error response:', errorText);
+      throw new Error(`API error: ${response.status} - ${errorText}`);
+    }
 
-
-
+    const data = await response.json();
+    console.log('Received architecture diagrams');
+    
+    return data;
+  } catch (error) {
+    console.error('Error generating architecture diagrams:', error);
+    throw error;
+  }
+}

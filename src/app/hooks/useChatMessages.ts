@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { sendMessage, resetSession, generateMockups } from '../services/api';
+import { sendMessage, resetSession, generateMockups, generateArchitecture } from '../services/api';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
 type MessageType = {
@@ -36,9 +36,9 @@ export const useChatMessages = () => {
   
   // Right panel content
   const [masterplanContent, setMasterplanContent] = useState<string>("");
-  const [requirementsContent, setRequirementsContent] = useState<string>("Requirements will appear here as they are defined through the conversation. The agent will extract key points and organize them into a structured format.");
-  const [architectureContent, setArchitectureContent] = useState<string>("Architecture details will be displayed here once generated.");
-  const [uiUxContent, setUiUxContent] = useState<string>("UI/UX mockups and specifications will be displayed here once generated.");
+  const [requirementsContent, setRequirementsContent] = useState<string>("");
+  const [architectureContent, setArchitectureContent] = useState<string>("");
+  const [uiUxContent, setUiUxContent] = useState<string>("");
   
   // Tab states
   const [currentRightTab, setCurrentRightTab] = useState<RightPanelTabType>("Requirements");
@@ -46,7 +46,9 @@ export const useChatMessages = () => {
 
   // Mockup states
   const [mockups, setMockups] = useState<MockupType[]>([]);
+  const [architectureDiagrams, setArchitectureDiagrams] = useState<MockupType[]>([]);
   const [isMockupGenerating, setIsMockupGenerating] = useState(false);
+  const [isArchitectureGenerating, setIsArchitectureGenerating] = useState(false);
   
   // Store submitted sketches
   const [submittedSketches, setSubmittedSketches] = useState<ExcalidrawElement[][]>([]);
@@ -183,10 +185,22 @@ export const useChatMessages = () => {
           setCurrentRightTab("Requirements");
         } else if (!hasMasterplan) {
           // Update requirements panel to include sketch information
-          setRequirementsContent(prev => `${prev}\n\n## UI Mockup\n- User provided a sketch for the interface layout`);
+          setRequirementsContent(prev => {
+            if (prev.trim() === '') {
+              return "## UI Mockup\n- User provided a sketch for the interface layout";
+            } else {
+              return `${prev}\n\n## UI Mockup\n- User provided a sketch for the interface layout`;
+            }
+          });
           
           // Also update UI/UX content since a sketch was provided
-          setUiUxContent(prev => `${prev}\n\n## UI Sketch\n- User provided a sketch for the interface layout`);
+          setUiUxContent(prev => {
+            if (prev.trim() === '') {
+              return "## UI Sketch\n- User provided a sketch for the interface layout";
+            } else {
+              return `${prev}\n\n## UI Sketch\n- User provided a sketch for the interface layout`;
+            }
+          });
           // Automatically switch to the UI/UX tab
           setCurrentRightTab("UI/UX");
         }
@@ -234,6 +248,56 @@ export const useChatMessages = () => {
       setError(err.message || "Failed to switch agent. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Generate architecture diagram based on masterplan
+  const handleGenerateArchitecture = async () => {
+    if (!masterplanContent) {
+      setError("No masterplan available. Please generate a masterplan first.");
+      return;
+    }
+
+    try {
+      setIsArchitectureGenerating(true);
+      
+      // Generate architecture diagrams
+      const response = await generateArchitecture(masterplanContent);
+      
+      if (response.success && response.diagrams) {
+        // Save the architecture diagrams
+        setArchitectureDiagrams(response.diagrams);
+        
+        // Update the Architecture content with the text descriptions
+        let architectureUpdatedContent = architectureContent + "\n\n## System Architecture\n\n";
+        
+        response.diagrams.forEach((diagram, index) => {
+          if (diagram.type === 'text') {
+            architectureUpdatedContent += diagram.content + "\n\n";
+          }
+        });
+        
+        setArchitectureContent(architectureUpdatedContent);
+        
+        // Add a message from the agent about architecture
+        const architectureMessage: MessageType = {
+          id: Date.now().toString(),
+          sender: 'agent',
+          content: "I've generated a system architecture diagram based on the masterplan. You can view it in the Architecture tab.",
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, architectureMessage]);
+        
+        // Switch to the Architecture tab
+        setCurrentRightTab("Architecture");
+      } else {
+        throw new Error(response.message || "Failed to generate architecture diagram");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to generate architecture. Please try again.");
+    } finally {
+      setIsArchitectureGenerating(false);
     }
   };
 
@@ -302,6 +366,9 @@ export const useChatMessages = () => {
         setMessages(prev => 
           prev.map(msg => msg.id === processingMessage.id ? successMessage : msg)
         );
+        
+        // Also generate architecture diagrams after mockups
+        handleGenerateArchitecture();
       } else {
         throw new Error(response.message || "Failed to generate mockups");
       }
@@ -329,13 +396,25 @@ export const useChatMessages = () => {
   const checkForSpecializedContent = (message: string) => {
     // Check for UI/UX content
     if (currentAgent === "UI/UX" || message.includes("UI mockup") || message.includes("user interface") || message.includes("UX flow")) {
-      setUiUxContent(prev => `${prev}\n\n## UI/UX Updates\n${message}`);
+      setUiUxContent(prev => {
+        if (prev.trim() === '') {
+          return `## UI/UX Updates\n${message}`;
+        } else {
+          return `${prev}\n\n## UI/UX Updates\n${message}`;
+        }
+      });
     }
     
     // Check for architecture content
     if (currentAgent === "Backend" || currentAgent === "Frontend" || currentAgent === "Database" || 
         message.includes("architecture") || message.includes("technical stack") || message.includes("data model")) {
-      setArchitectureContent(prev => `${prev}\n\n## Architecture Updates\n${message}`);
+      setArchitectureContent(prev => {
+        if (prev.trim() === '') {
+          return `## Architecture Updates\n${message}`;
+        } else {
+          return `${prev}\n\n## Architecture Updates\n${message}`;
+        }
+      });
     }
   };
   
@@ -400,25 +479,32 @@ export const useChatMessages = () => {
         break;
     }
     
-    // Check if the section already exists
-    if (requirementsContent.includes(sectionPrefix)) {
-      // If it exists, append to it
-      setRequirementsContent(prev => {
-        const sections = prev.split('\n\n');
-        const updatedSections = sections.map(section => {
-          if (section.startsWith(sectionPrefix)) {
-            // Extract a key point from agent response (simple implementation)
-            const newPoint = `- ${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}`;
-            return `${section}\n${newPoint}`;
-          }
-          return section;
+    // Check if the requirementsContent already has content
+    if (requirementsContent.trim() !== '') {
+      // Check if the section already exists
+      if (requirementsContent.includes(sectionPrefix)) {
+        // If it exists, append to it
+        setRequirementsContent(prev => {
+          const sections = prev.split('\n\n');
+          const updatedSections = sections.map(section => {
+            if (section.startsWith(sectionPrefix)) {
+              // Extract a key point from agent response (simple implementation)
+              const newPoint = `- ${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}`;
+              return `${section}\n${newPoint}`;
+            }
+            return section;
+          });
+          return updatedSections.join('\n\n');
         });
-        return updatedSections.join('\n\n');
-      });
+      } else {
+        // If the section doesn't exist, create it
+        const newSection = `${sectionPrefix}\n- ${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}`;
+        setRequirementsContent(prev => `${prev}\n\n${newSection}`);
+      }
     } else {
-      // If the section doesn't exist, create it
+      // If requirementsContent is empty, initialize it with the new section
       const newSection = `${sectionPrefix}\n- ${userMessage.slice(0, 50)}${userMessage.length > 50 ? '...' : ''}`;
-      setRequirementsContent(prev => `${prev}\n\n${newSection}`);
+      setRequirementsContent(newSection);
     }
   };
 
@@ -465,7 +551,9 @@ export const useChatMessages = () => {
     architectureContent,
     hasMasterplan,
     mockups,
+    architectureDiagrams,
     isMockupGenerating,
+    isArchitectureGenerating,
     submittedSketches,
     
     // State setters

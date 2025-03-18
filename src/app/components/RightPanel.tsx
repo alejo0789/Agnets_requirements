@@ -16,6 +16,7 @@ interface RightPanelProps {
   architectureContent: string;
   hasMasterplan: boolean;
   mockups: MockupType[];
+  architectureDiagrams?: MockupType[];
   onExportContent: () => void;
   panelWidth: number;
   handleResizeStart: (e: React.MouseEvent) => void;
@@ -59,6 +60,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     architectureContent, 
     hasMasterplan,
     mockups,
+    architectureDiagrams = [],
     onExportContent,
     panelWidth,
     handleResizeStart 
@@ -192,7 +194,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     };
 
     // Function to render SVG mockups safely
-    const renderSvgMockup = (svgContent: string, index: number) => {
+    const renderSvgContent = (svgContent: string, index: number) => {
       try {
         // Remove any XML declaration that might cause issues
         let cleanedSvg = svgContent.replace(/<\?xml[^?]*\?>/, '');
@@ -202,14 +204,14 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           cleanedSvg = cleanedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
         }
         
-        // Create a unique ID for the mockup
-        const mockupId = `mockup-${index}`;
+        // Create a unique ID for the content
+        const contentId = `svg-content-${index}`;
         
         // Return in a responsive container
         return (
-          <div key={`svg-mockup-${index}`} className="my-4 border rounded-lg p-3 bg-white shadow-sm">
+          <div key={`svg-content-${index}`} className="my-4 border rounded-lg p-3 bg-white shadow-sm">
             <div 
-              id={mockupId}
+              id={contentId}
               className="svg-container w-full overflow-auto"
               dangerouslySetInnerHTML={{ __html: cleanedSvg }} 
             />
@@ -219,8 +221,8 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         // If there's an error rendering the SVG, show an error message
         console.error("Error rendering SVG:", error);
         return (
-          <div key={`svg-mockup-${index}`} className="my-4 border rounded-lg p-3 bg-red-50 shadow-sm">
-            <p className="text-red-500 text-sm">Error rendering mockup. SVG content might be invalid.</p>
+          <div key={`svg-content-${index}`} className="my-4 border rounded-lg p-3 bg-red-50 shadow-sm">
+            <p className="text-red-500 text-sm">Error rendering content. SVG content might be invalid.</p>
             <details>
               <summary className="cursor-pointer text-xs text-gray-500">View SVG Code</summary>
               <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">{svgContent}</pre>
@@ -232,10 +234,13 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
 
     // Determine what content to show in the Requirements tab (including masterplan if available)
     const getRequirementsContent = () => {
+      // Only show masterplan if it exists
       if (hasMasterplan) {
         return masterplanContent;
       }
-      return requirementsContent;
+      
+      // Show empty state message if no masterplan
+      return "";
     };
 
     // Handle showing mockups
@@ -245,7 +250,22 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           <div className="mt-4">
             <h2 className="text-lg font-semibold mb-3">UI/UX Mockups</h2>
             {mockups.map((mockup, index) => (
-              mockup.type === 'svg' && renderSvgMockup(mockup.content, index)
+              mockup.type === 'svg' && renderSvgContent(mockup.content, index)
+            ))}
+          </div>
+        );
+      }
+      return null;
+    };
+
+    // Handle showing architecture diagrams
+    const renderArchitectureDiagrams = () => {
+      if (architectureDiagrams && architectureDiagrams.length > 0) {
+        return (
+          <div className="mt-4">
+            <h2 className="text-lg font-semibold mb-3">Architecture Diagram</h2>
+            {architectureDiagrams.map((diagram, index) => (
+              diagram.type === 'svg' && renderSvgContent(diagram.content, index)
             ))}
           </div>
         );
@@ -257,16 +277,58 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     const getTabContent = () => {
       switch (currentTab) {
         case "Requirements":
-          return renderMarkdown(getRequirementsContent());
+          const reqContent = getRequirementsContent();
+          if (reqContent) {
+            return renderMarkdown(reqContent);
+          } else {
+            // Empty state - waiting for masterplan
+            return (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-center">The masterplan will appear here once it's generated from your conversation with the assistant.</p>
+              </div>
+            );
+          }
         case "UI/UX":
-          return (
-            <>
-              {renderMarkdown(uiUxContent)}
-              {renderMockups()}
-            </>
-          );
+          if (uiUxContent.trim() || mockups.length > 0) {
+            return (
+              <>
+                {uiUxContent.trim() && renderMarkdown(uiUxContent)}
+                {renderMockups()}
+              </>
+            );
+          } else {
+            // Empty state - waiting for UI/UX content
+            return (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                <p className="text-center">UI/UX information will appear here as you discuss design aspects or generate mockups.</p>
+              </div>
+            );
+          }
         case "Architecture":
-          return renderMarkdown(architectureContent);
+          if (architectureContent.trim() || (architectureDiagrams && architectureDiagrams.length > 0)) {
+            return (
+              <>
+                {architectureContent.trim() && renderMarkdown(architectureContent)}
+                {renderArchitectureDiagrams()}
+              </>
+            );
+          } else {
+            // Empty state - waiting for architecture content
+            return (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <p className="text-center">Technical architecture details will appear here as you discuss technical considerations.</p>
+              </div>
+            );
+          }
         default:
           return null;
       }
@@ -327,8 +389,9 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         <div className="p-3 border-t">
           <div className="flex justify-between">
             <button 
-              className="bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded text-sm font-medium"
+              className={`${!hasMasterplan && currentTab === "Requirements" ? 'opacity-50 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'} px-3 py-2 rounded text-sm font-medium`}
               onClick={onExportContent}
+              disabled={!hasMasterplan && currentTab === "Requirements"}
             >
               Export {currentTab === "Requirements" && hasMasterplan ? "Masterplan" : currentTab}
             </button>

@@ -33,6 +33,7 @@ export default function Home() {
     architectureContent,
     hasMasterplan,
     mockups,
+    architectureDiagrams,
     setCurrentRightTab,
     handleSendMessage,
     handleSubmitDrawing,
@@ -164,6 +165,7 @@ export default function Home() {
               architectureContent={architectureContent}
               hasMasterplan={hasMasterplan}
               mockups={mockups}
+              architectureDiagrams={architectureDiagrams}
               onExportContent={handleExportContent}
               panelWidth={panelWidth}
               handleResizeStart={handlePanelResizeStart}

@@ -228,7 +228,7 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           if (uiUxContent.trim() || mockups.length > 0) {
             return (
               <>
-                {uiUxContent.trim() && renderMarkdown(uiUxContent)}
+                
                 {mockups.length > 0 && (
                   <div className="mt-4">
                     <h2 className="text-lg font-semibold mb-3">UI/UX Mockups</h2>

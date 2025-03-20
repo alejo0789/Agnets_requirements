@@ -1,4 +1,3 @@
-// Updated RightPanel with improved SVG rendering support
 import React, { forwardRef } from 'react';
 import MockupRenderer from './MockupRenderer';
 
@@ -195,19 +194,14 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
       return result;
     };
 
-    // Determine what content to show in the Requirements tab (including masterplan if available)
+    // Determine what content to show in the Requirements tab (only show masterplan)
     const getRequirementsContent = () => {
       // Only show masterplan if it exists
       if (hasMasterplan) {
         return masterplanContent;
       }
       
-      // If no masterplan, but we have requirements content
-      if (requirementsContent.trim()) {
-        return requirementsContent;
-      }
-      
-      // Show empty state message if no content
+      // Otherwise, return empty string to trigger empty state
       return "";
     };
 
@@ -215,9 +209,9 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     const getTabContent = () => {
       switch (currentTab) {
         case "Requirements":
-          const reqContent = getRequirementsContent();
-          if (reqContent) {
-            return renderMarkdown(reqContent);
+          // Only display masterplan if it exists
+          if (hasMasterplan && masterplanContent) {
+            return renderMarkdown(masterplanContent);
           } else {
             // Empty state - waiting for masterplan
             return (
@@ -233,12 +227,20 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
           if (uiUxContent.trim() || mockups.length > 0) {
             return (
               <>
-            
+                {/* Text content first */}
+                { (
+                  <div className="mb-6">
+                  
+                  </div>
+                )}
                 
+                {/* Then mockups with their own descriptions */}
                 {mockups.length > 0 && (
-                  <div className="mt-4">
+                  <div className="mt-6">
                     <h2 className="text-lg font-semibold mb-3">UI/UX Mockups</h2>
-                    <MockupRenderer mockups={mockups} />
+                    <div className="p-1 bg-white rounded-lg shadow-sm">
+                      <MockupRenderer mockups={mockups} />
+                    </div>
                   </div>
                 )}
               </>
@@ -255,21 +257,21 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
             );
           }
         case "Architecture":
-          // Only show architecture-specific content, not the masterplan
           if ((architectureContent && architectureContent.trim()) || 
               (architectureDiagrams && architectureDiagrams.length > 0)) {
             return (
               <>
-                {/* Display architecture diagrams first for better visibility */}
+              
+                
+                {/* Display architecture diagrams */}
                 {architectureDiagrams && architectureDiagrams.length > 0 && (
-                  <div className="mb-6">
+                  <div className="mt-4">
                     <h2 className="text-lg font-semibold mb-3">System Architecture Diagram</h2>
-                    <MockupRenderer mockups={architectureDiagrams} />
+                    <div className="p-1 bg-white rounded-lg shadow-sm">
+                      <MockupRenderer mockups={architectureDiagrams} />
+                    </div>
                   </div>
                 )}
-                
-                {/* Then display any architecture-specific textual content */}
-             
               </>
             );
           } else {

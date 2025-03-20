@@ -94,13 +94,7 @@ export default function Home() {
         <div className="bg-white p-5 shadow-md">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">MVP Builder - Sketch Interface</h1>
-            {isClient && (
-              <AgentSelector 
-                currentAgent={currentAgent}
-                onAgentChange={switchAgent}
-                isLoading={isLoading || isMockupGenerating}
-              />
-            )}
+          
           </div>
         </div>
         

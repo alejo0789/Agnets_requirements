@@ -28,7 +28,7 @@ export async function sendMessage(
   architecture?: string
 }> {
   try {
-    console.log(`Sending message to ${agentType} agent: ${message.substring(0, 50)}...`);
+    console.log(`Sending messages to ${agentType} agent: ${message.substring(0, 50)}...`);
     
     const payload: any = { 
       message,

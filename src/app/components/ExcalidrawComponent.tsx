@@ -23,10 +23,33 @@ interface ExcalidrawComponentProps {
 // Make sure to use 'export default' here
 export default function ExcalidrawComponent({ onChange }: ExcalidrawComponentProps) {
   const [isClient, setIsClient] = useState(false);
+  
+  // Create a reference to the Excalidraw app instance
+  const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Set the active tool after Excalidraw is initialized
+  useEffect(() => {
+    if (excalidrawAPI) {
+      try {
+        // Use setTimeout to ensure the component is fully loaded
+        setTimeout(() => {
+          // Explicitly cast to any to bypass TypeScript type checking
+          (excalidrawAPI as any).updateScene({
+            appState: {
+              // Set the active tool to freedraw
+              currentTool: "freedraw"
+            }
+          });
+        }, 100);
+      } catch (error) {
+        console.error("Error setting active tool:", error);
+      }
+    }
+  }, [excalidrawAPI]);
 
   const handleChange = (
     elements: readonly ExcalidrawElement[], 
@@ -49,14 +72,19 @@ export default function ExcalidrawComponent({ onChange }: ExcalidrawComponentPro
   return (
     <div style={{ height: '100%', width: '100%' }}>
       <Excalidraw
-        onChange={handleChange}
-        gridModeEnabled={false}
-        zenModeEnabled={false}
+      
+      
         initialData={{
           appState: {
-            viewBackgroundColor: "#f8f9fa"
+            viewBackgroundColor: "#f8f9fa",
+            currentItemStrokeColor: "#1971c2",
+            currentItemBackgroundColor: "#fff",
+            currentItemStrokeWidth: 2,
+            
           }
         }}
+        // Get a reference to the Excalidraw API
+        ref={(api) => setExcalidrawAPI(api)}
       />
     </div>
   );

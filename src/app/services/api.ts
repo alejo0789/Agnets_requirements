@@ -5,7 +5,7 @@ import { convertDrawingToImage, extractBase64FromDataUrl } from '../utils/drawin
 
 // Base URL for API calls - adjust based on your deployment setup
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+
 type AgentType = "Requirements" | "UI/UX" | "Frontend" | "Database" | "Backend";
 
 /**

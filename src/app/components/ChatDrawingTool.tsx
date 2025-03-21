@@ -1,21 +1,7 @@
-// src/app/components/ChatDrawingTool.tsx
-import React, { useRef, memo } from 'react';
-import dynamic from 'next/dynamic';
+import React, { memo } from 'react';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types/types';
-
-// Import Excalidraw dynamically to prevent SSR issues
-const Excalidraw = dynamic(
-  () => import('@excalidraw/excalidraw').then((mod) => mod.Excalidraw),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center">
-        <p>Loading drawing tool...</p>
-      </div>
-    ),
-  }
-);
+import ExcalidrawComponent from './ExcalidrawComponent';
 
 interface ChatDrawingToolProps {
   isClient: boolean;
@@ -43,8 +29,6 @@ const ChatDrawingTool = memo(({
   previewImage,
   isGeneratingPreview
 }: ChatDrawingToolProps) => {
-  // Use ref to track the initial render
-  const isInitialRender = useRef(true);
   
   // A stable onChange handler that won't cause infinite updates
   const handleExcalidrawChange = (
@@ -52,12 +36,6 @@ const ChatDrawingTool = memo(({
     appState: AppState,
     files: BinaryFiles
   ) => {
-    // Skip the first onChange event which happens on initial render
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
-    
     // Only trigger updates when elements actually change
     if (elements && elements.length > 0) {
       onDrawingChange(elements);
@@ -81,16 +59,7 @@ const ChatDrawingTool = memo(({
           className="transition-none overflow-hidden pt-6"
         >
           {isClient && (
-            <Excalidraw
-              onChange={handleExcalidrawChange}
-              initialData={{
-                elements: [],
-                appState: { 
-                  viewBackgroundColor: "#ffffff"
-                },
-                scrollToContent: true
-              }}
-            />
+            <ExcalidrawComponent onChange={handleExcalidrawChange} />
           )}
         </div>
         

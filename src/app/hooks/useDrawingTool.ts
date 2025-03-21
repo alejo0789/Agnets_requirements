@@ -1,4 +1,3 @@
-// src/app/hooks/useDrawingTool.ts
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 import { convertDrawingToImage } from '../utils/drawingUtils';
@@ -101,8 +100,24 @@ export const useDrawingTool = (onSubmitDrawing: (elements: ExcalidrawElement[]) 
         setIsGeneratingPreview(true);
         const imageDataUrl = await convertDrawingToImage(currentDrawingElements);
         setPreviewImage(imageDataUrl);
+        
+        // Add a toast notification to improve UX
+        if (window && (window as any).excalidrawAPI?.setToast) {
+          (window as any).excalidrawAPI.setToast({
+            message: "Preview generated",
+            duration: 2000,
+          });
+        }
       } catch (error) {
         console.error('Error generating preview:', error);
+        
+        // Show error toast if possible
+        if (window && (window as any).excalidrawAPI?.setToast) {
+          (window as any).excalidrawAPI.setToast({
+            message: "Error generating preview",
+            duration: 2000,
+          });
+        }
       } finally {
         setIsGeneratingPreview(false);
       }

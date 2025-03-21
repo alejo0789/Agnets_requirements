@@ -93,7 +93,7 @@ export default function Home() {
         {/* Top header */}
         <div className="bg-white p-5 shadow-md">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">MVP Builder - Sketch Interface</h1>
+            <h1 className="text-3xl font-bold">MVP Knowledge Base Builder </h1>
           
           </div>
         </div>

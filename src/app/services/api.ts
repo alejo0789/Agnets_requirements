@@ -1,4 +1,4 @@
-// src/app/services/api.ts - updated version with image sending capabilities
+// src/app/services/api.ts - updated version with improved error handling and session management
 
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 import { convertDrawingToImage, extractBase64FromDataUrl } from '../utils/drawingUtils';
@@ -8,8 +8,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 type AgentType = "Requirements" | "UI/UX" | "Frontend" | "Database" | "Backend";
 
+// Add request timeout functionality
+const withTimeout = (promise: Promise<any>, timeoutMs: number = 30000) => {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]);
+};
+
 /**
- * Send a message to the chat API
+ * Send a message to the chat API with improved error handling
  * @param message The user message to send
  * @param agentType The current agent type
  * @returns The response from the API
@@ -42,7 +50,7 @@ export async function sendMessage(
       console.log('Including drawing image in message');
     }
     
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const fetchPromise = fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,15 +58,28 @@ export async function sendMessage(
       body: JSON.stringify(payload),
       credentials: 'include', // Important for session cookies
     });
+    
+    // Add timeout handling
+    const response = await withTimeout(fetchPromise);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API error response:', errorText);
-      throw new Error(`API error: ${response.status} - ${errorText}`);
+      
+      // Check for specific error types
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Session expired or unauthorized. Please refresh the page.');
+      } else if (response.status === 429) {
+        throw new Error('Too many requests. Please try again later.');
+      } else if (response.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      } else {
+        throw new Error(`API error: ${response.status} - ${errorText || 'Unknown error'}`);
+      }
     }
 
     const data = await response.json();
-    console.log(`Received response: ${data.response.substring(0, 50)}...`);
+    console.log(`Received response from ${agentType} agent`);
     
     // If the response includes a masterplan, log it
     if (data.masterplan) {
@@ -66,7 +87,13 @@ export async function sendMessage(
     }
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
+    // Handle network errors specifically
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      console.error('Network error:', error);
+      throw new Error('Network error. Please check your internet connection and try again.');
+    }
+    
     console.error('Error sending message:', error);
     throw error;
   }
@@ -108,43 +135,14 @@ export async function submitDrawing(
   }
 }
 
-// Rest of your API functions remain the same...
-export async function generateMasterplan(): Promise<{ 
-  response: string,
-  masterplan?: string
-}> {
-  try {
-    // Send a direct and clear request to generate the masterplan
-    const response = await sendMessage("Please generate a comprehensive masterplan for my app based on our conversation so far.");
-    return response;
-  } catch (error) {
-    console.error('Error generating masterplan:', error);
-    throw error;
-  }
-}
-
-export async function switchAgent(agentType: AgentType): Promise<{ 
-  response: string,
-  requirements?: any,
-  masterplan?: string,
-  uiUx?: string,
-  architecture?: string
-}> {
-  try {
-    // Send a message to the backend indicating agent switch
-    const switchMessage = `I'd like to switch to discussing ${agentType.toLowerCase()} considerations now. What specific ${agentType.toLowerCase()} requirements should we explore?`;
-    
-    const response = await sendMessage(switchMessage, agentType);
-    return response;
-  } catch (error) {
-    console.error('Error switching agent:', error);
-    throw error;
-  }
-}
-
+/**
+ * Reset the session on the server
+ * @param preserveMasterplan Whether to preserve the masterplan in the session
+ * @returns Status response from the server
+ */
 export async function resetSession(preserveMasterplan: boolean = true): Promise<{ status: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/reset`, {
+    const fetchPromise = fetch(`${API_BASE_URL}/reset`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -152,9 +150,14 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
       body: JSON.stringify({ preserve_masterplan: preserveMasterplan }),
       credentials: 'include', // Important for session cookies
     });
+    
+    // Add timeout handling
+    const response = await withTimeout(fetchPromise);
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API error response:', errorText);
+      throw new Error(`Reset session failed: ${response.status} - ${errorText || 'Unknown error'}`);
     }
 
     return await response.json();
@@ -164,6 +167,12 @@ export async function resetSession(preserveMasterplan: boolean = true): Promise<
   }
 }
 
+/**
+ * Generate UI/UX mockups based on masterplan and sketches
+ * @param masterplan The masterplan content
+ * @param sketches Array of Excalidraw elements representing sketches
+ * @returns Generated mockups and status
+ */
 export async function generateMockups(
   masterplan?: string, 
   sketches?: ExcalidrawElement[][]
@@ -173,7 +182,7 @@ export async function generateMockups(
   message?: string
 }> {
   try {
-    console.log('Requesting mockup generation from Claude AI');
+    console.log('Requesting mockup generation');
     console.log(`Sketches provided: ${sketches ? sketches.length : 0}`);
     
     // Prepare the request payload
@@ -201,7 +210,7 @@ export async function generateMockups(
       console.log(`Converted ${payload.sketch_images.length} sketches to images`);
     }
     
-    const response = await fetch(`${API_BASE_URL}/generate-mockups`, {
+    const fetchPromise = fetch(`${API_BASE_URL}/generate-mockups`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -209,15 +218,23 @@ export async function generateMockups(
       body: JSON.stringify(payload),
       credentials: 'include', // Important for session cookies
     });
+    
+    // Use a longer timeout for mockup generation (60 seconds)
+    const response = await withTimeout(fetchPromise, 60000);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API error response:', errorText);
-      throw new Error(`API error: ${response.status} - ${errorText}`);
+      throw new Error(`Mockup generation failed: ${response.status} - ${errorText || 'Unknown error'}`);
     }
 
     const data = await response.json();
-    console.log('Received mockups from Claude AI');
+    
+    // Check the status
+    if (data.status === 'processing' && data.job_id) {
+      // If processing, start polling for completion
+      return await pollForMockupCompletion(data.job_id);
+    }
     
     return data;
   } catch (error) {
@@ -226,6 +243,66 @@ export async function generateMockups(
   }
 }
 
+/**
+ * Poll for mockup generation completion
+ * @param jobId The job ID to check
+ * @returns The completed mockups
+ */
+async function pollForMockupCompletion(jobId: string): Promise<{ 
+  success: boolean,
+  mockups?: Array<{type: string, content: string}>,
+  message?: string
+}> {
+  // Poll every 2 seconds for up to 2 minutes
+  const maxAttempts = 60;
+  const pollInterval = 2000;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      console.log(`Checking mockup status (attempt ${attempt + 1}/${maxAttempts})...`);
+      
+      const response = await fetch(`${API_BASE_URL}/check-mockup-status?job_id=${jobId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        console.error(`Status check failed: ${response.status}`);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        continue;
+      }
+      
+      const status = await response.json();
+      
+      if (status.status === 'completed' && status.mockups) {
+        console.log('Mockup generation completed successfully');
+        return {
+          success: true,
+          mockups: status.mockups
+        };
+      } else if (status.status === 'error') {
+        console.error('Mockup generation failed:', status.message);
+        throw new Error(status.message || 'Mockup generation failed');
+      }
+      
+      // Still processing, wait and try again
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    } catch (error) {
+      console.error('Error checking mockup status:', error);
+      // Continue polling despite errors
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+  }
+  
+  // If we get here, polling timed out
+  throw new Error('Mockup generation timed out. Please try again.');
+}
+
+/**
+ * Generate architecture diagrams based on masterplan
+ * @param masterplan The masterplan content
+ * @returns Generated architecture diagrams and status
+ */
 export async function generateArchitecture(
   masterplan?: string
 ): Promise<{
@@ -239,7 +316,7 @@ export async function generateArchitecture(
     // Prepare the request payload
     const payload: any = { masterplan };
     
-    const response = await fetch(`${API_BASE_URL}/generate-architecture`, {
+    const fetchPromise = fetch(`${API_BASE_URL}/generate-architecture`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -247,19 +324,108 @@ export async function generateArchitecture(
       body: JSON.stringify(payload),
       credentials: 'include', // Important for session cookies
     });
+    
+    // Use a longer timeout for architecture generation (60 seconds)
+    const response = await withTimeout(fetchPromise, 60000);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API error response:', errorText);
-      throw new Error(`API error: ${response.status} - ${errorText}`);
+      throw new Error(`Architecture generation failed: ${response.status} - ${errorText || 'Unknown error'}`);
     }
 
     const data = await response.json();
-    console.log('Received architecture diagrams');
+    
+    // Check the status
+    if (data.status === 'processing' && data.job_id) {
+      // If processing, start polling for completion
+      return await pollForArchitectureCompletion(data.job_id);
+    }
     
     return data;
   } catch (error) {
     console.error('Error generating architecture diagrams:', error);
+    throw error;
+  }
+}
+
+/**
+ * Poll for architecture generation completion
+ * @param jobId The job ID to check
+ * @returns The completed architecture diagrams
+ */
+async function pollForArchitectureCompletion(jobId: string): Promise<{
+  success: boolean,
+  diagrams?: Array<{type: string, content: string}>,
+  message?: string
+}> {
+  // Poll every 2 seconds for up to 2 minutes
+  const maxAttempts = 60;
+  const pollInterval = 2000;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      console.log(`Checking architecture status (attempt ${attempt + 1}/${maxAttempts})...`);
+      
+      const response = await fetch(`${API_BASE_URL}/check-architecture-status?job_id=${jobId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        console.error(`Status check failed: ${response.status}`);
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        continue;
+      }
+      
+      const status = await response.json();
+      
+      if (status.status === 'completed' && status.diagrams) {
+        console.log('Architecture generation completed successfully');
+        return {
+          success: true,
+          diagrams: status.diagrams
+        };
+      } else if (status.status === 'error') {
+        console.error('Architecture generation failed:', status.message);
+        throw new Error(status.message || 'Architecture generation failed');
+      }
+      
+      // Still processing, wait and try again
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    } catch (error) {
+      console.error('Error checking architecture status:', error);
+      // Continue polling despite errors
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+  }
+  
+  // If we get here, polling timed out
+  throw new Error('Architecture generation timed out. Please try again.');
+}
+
+/**
+ * Check server health
+ * @returns Health status of the server
+ */
+export async function checkServerHealth(): Promise<{ 
+  status: string, 
+  timestamp: string,
+  version: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Health check failed: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Server health check failed:', error);
     throw error;
   }
 }

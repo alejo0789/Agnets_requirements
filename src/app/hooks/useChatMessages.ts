@@ -1,5 +1,11 @@
-import { useState } from 'react';
-import { sendMessage, resetSession, generateMockups, generateArchitecture } from '../services/api';
+import { useState, useCallback } from 'react';
+import { 
+  sendMessage, 
+  resetSession, 
+  generateMockups, 
+  generateArchitecture, 
+  checkServerHealth 
+} from '../services/api';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
 
 type MessageType = {
@@ -21,6 +27,9 @@ export const useChatMessages = () => {
   // Loading and error states
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Server status
+  const [isServerHealthy, setIsServerHealthy] = useState(true);
   
   // Chat state
   const [messages, setMessages] = useState<MessageType[]>([
@@ -53,10 +62,23 @@ export const useChatMessages = () => {
   // Store submitted sketches
   const [submittedSketches, setSubmittedSketches] = useState<ExcalidrawElement[][]>([]);
 
+  // Check server health on initialization
+  useCallback(async () => {
+    try {
+      const health = await checkServerHealth();
+      setIsServerHealthy(health.status === 'healthy');
+    } catch (error) {
+      console.error('Server health check failed:', error);
+      setIsServerHealthy(false);
+    }
+  }, []);
+
   // Reset the chat session but maintain right panel content
   const handleResetChat = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      
       await resetSession();
       
       // Reset only the conversation, keep right panel content
@@ -66,10 +88,9 @@ export const useChatMessages = () => {
         content: 'What kind of MVP are we building today?',
         timestamp: new Date(),
       }]);
-      
-      setError(null);
-    } catch (err) {
-      setError("Failed to reset chat session. Please try again.");
+    } catch (err: any) {
+      setError("Failed to reset chat session. Please try again later.");
+      console.error("Reset error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -77,153 +98,176 @@ export const useChatMessages = () => {
   
   // Send a message to the API
   const handleSendMessage = async (content: string) => {
-    if (content.trim() && !isLoading) {
-      try {
-        setIsLoading(true);
+    if (!content.trim() || isLoading) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Add user message
+      const newUserMessage: MessageType = {
+        id: Date.now().toString(),
+        sender: 'user',
+        content: content.trim(),
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, newUserMessage]);
+      
+      // Get response from backend
+      const apiResponse = await sendMessage(newUserMessage.content, currentAgent);
+      
+      // Check if the API response includes a masterplan
+      const masterplanContent = apiResponse.masterplan || checkForMasterplan(apiResponse.response);
+      let displayContent = apiResponse.response;
+      
+      // If this is a masterplan, replace it with a shorter message in the chat
+      if (masterplanContent) {
+        displayContent = "I've generated the masterplan for your application! You can see the full document in the panel on the right. Let me know if you'd like any clarification or have questions about specific sections.";
         
-        // Add user message
-        const newUserMessage: MessageType = {
-          id: Date.now().toString(),
-          sender: 'user',
-          content: content.trim(),
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, newUserMessage]);
-        
-        // Get response from backend
-        const apiResponse = await sendMessage(newUserMessage.content);
-        
-        // Check if the API response includes a masterplan
-        const masterplanContent = apiResponse.masterplan || checkForMasterplan(apiResponse.response);
-        let displayContent = apiResponse.response;
-        
-        // If this is a masterplan, replace it with a shorter message in the chat
-        if (masterplanContent) {
-          displayContent = "I've generated the masterplan for your application! You can see the full document in the panel on the right. Let me know if you'd like any clarification or have questions about specific sections.";
-          
-          // Save masterplan content and set tab to show it
-          setMasterplanContent(masterplanContent);
-          setHasMasterplan(true);
-          setCurrentRightTab("Requirements");
-        } else if (!hasMasterplan) {
-          // Only update requirements panel if masterplan hasn't been generated yet
-          updateRequirementsPanel(newUserMessage.content, apiResponse.response);
-        }
-        
-        // Create agent message from response (with modified content if it's a masterplan)
-        const newAgentMessage: MessageType = {
-          id: (Date.now() + 1).toString(),
-          sender: 'agent',
-          content: displayContent,
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, newAgentMessage]);
-        
-        // Check if the response contains UI/UX or architecture information
-        checkForSpecializedContent(apiResponse.response);
-        
-      } catch (err: any) {
-        setError(err.message || "Failed to send message. Please try again.");
-        
-        // Add error message to chat
-        const errorMessage: MessageType = {
-          id: Date.now().toString(),
-          sender: 'agent',
-          content: "Sorry, there was an error processing your request. Please try again.",
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
+        // Save masterplan content and set tab to show it
+        setMasterplanContent(masterplanContent);
+        setHasMasterplan(true);
+        setCurrentRightTab("Requirements");
+      } else if (!hasMasterplan) {
+        // Only update requirements panel if masterplan hasn't been generated yet
+        updateRequirementsPanel(newUserMessage.content, apiResponse.response);
       }
+      
+      // Create agent message from response (with modified content if it's a masterplan)
+      const newAgentMessage: MessageType = {
+        id: (Date.now() + 1).toString(),
+        sender: 'agent',
+        content: displayContent,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, newAgentMessage]);
+      
+      // Check if the response contains UI/UX or architecture information
+      checkForSpecializedContent(apiResponse.response);
+      
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to send message. Please try again.";
+      setError(errorMessage);
+      
+      // Add error message to chat
+      const errorAgentMessage: MessageType = {
+        id: Date.now().toString(),
+        sender: 'agent',
+        content: `Sorry, there was an error processing your request: ${errorMessage}`,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorAgentMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Handle submitting a drawing as a message
   const handleSubmitDrawing = async (drawingElements: ExcalidrawElement[]) => {
-    if (drawingElements.length > 0) {
-      try {
-        setIsLoading(true);
+    if (drawingElements.length === 0 || isLoading) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Save the drawing elements to our state
+      setSubmittedSketches(prev => [...prev, [...drawingElements]]);
+      
+      // Create a new message with the drawing
+      const newDrawingMessage: MessageType = {
+        id: Date.now().toString(),
+        sender: 'user',
+        content: 'Here is my sketch:',
+        timestamp: new Date(),
+        drawingElements: [...drawingElements] // Save a copy of the drawing
+      };
+      
+      setMessages(prev => [...prev, newDrawingMessage]);
+      
+      // Send a message to the API that includes sketch information
+      const apiResponse = await sendMessage(
+        "I've created a sketch of the interface. [Sketch data included in frontend]", 
+        currentAgent
+      );
+      
+      // Create agent message from response
+      const newAgentMessage: MessageType = {
+        id: (Date.now() + 1).toString(),
+        sender: 'agent',
+        content: apiResponse.response,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, newAgentMessage]);
+      
+      // Check if the API response includes a masterplan
+      const masterplanContent = apiResponse.masterplan || checkForMasterplan(apiResponse.response);
+      
+      // If this is a masterplan, handle it
+      if (masterplanContent) {
+        setMasterplanContent(masterplanContent);
+        setHasMasterplan(true);
+        setCurrentRightTab("Requirements");
+      } else if (!hasMasterplan) {
+        // Update requirements panel to include sketch information
+        setRequirementsContent(prev => {
+          if (prev.trim() === '') {
+            return "## UI Mockup\n- User provided a sketch for the interface layout";
+          } else {
+            return `${prev}\n\n## UI Mockup\n- User provided a sketch for the interface layout`;
+          }
+        });
         
-        // Save the drawing elements to our state
-        setSubmittedSketches(prev => [...prev, [...drawingElements]]);
-        
-        // Create a new message with the drawing
-        const newDrawingMessage: MessageType = {
-          id: Date.now().toString(),
-          sender: 'user',
-          content: 'Here is my sketch:',
-          timestamp: new Date(),
-          drawingElements: [...drawingElements] // Save a copy of the drawing
-        };
-        
-        setMessages(prev => [...prev, newDrawingMessage]);
-        
-        // For now, we'll send a message to the API that includes sketch information
-        const apiResponse = await sendMessage("I've created a sketch of the interface. [Sketch data included in frontend]");
-        
-        // Create agent message from response
-        const newAgentMessage: MessageType = {
-          id: (Date.now() + 1).toString(),
-          sender: 'agent',
-          content: apiResponse.response,
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, newAgentMessage]);
-        
-        // Check if the API response includes a masterplan
-        const masterplanContent = apiResponse.masterplan || checkForMasterplan(apiResponse.response);
-        
-        // If this is a masterplan, handle it
-        if (masterplanContent) {
-          setMasterplanContent(masterplanContent);
-          setHasMasterplan(true);
-          setCurrentRightTab("Requirements");
-        } else if (!hasMasterplan) {
-          // Update requirements panel to include sketch information
-          setRequirementsContent(prev => {
-            if (prev.trim() === '') {
-              return "## UI Mockup\n- User provided a sketch for the interface layout";
-            } else {
-              return `${prev}\n\n## UI Mockup\n- User provided a sketch for the interface layout`;
-            }
-          });
-          
-          // Also update UI/UX content since a sketch was provided
-          setUiUxContent(prev => {
-            if (prev.trim() === '') {
-              return "## UI Sketch\n- User provided a sketch for the interface layout";
-            } else {
-              return `${prev}\n\n## UI Sketch\n- User provided a sketch for the interface layout`;
-            }
-          });
-          // Automatically switch to the UI/UX tab
-          setCurrentRightTab("UI/UX");
-        }
-        
-        // Check if the response contains specialized content
-        checkForSpecializedContent(apiResponse.response);
-        
-      } catch (err: any) {
-        setError(err.message || "Failed to process sketch. Please try again.");
-      } finally {
-        setIsLoading(false);
+        // Also update UI/UX content since a sketch was provided
+        setUiUxContent(prev => {
+          if (prev.trim() === '') {
+            return "## UI Sketch\n- User provided a sketch for the interface layout";
+          } else {
+            return `${prev}\n\n## UI Sketch\n- User provided a sketch for the interface layout`;
+          }
+        });
+        // Automatically switch to the UI/UX tab
+        setCurrentRightTab("UI/UX");
       }
+      
+      // Check if the response contains specialized content
+      checkForSpecializedContent(apiResponse.response);
+      
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to process sketch. Please try again.";
+      setError(errorMessage);
+      
+      // Add error message to chat
+      const errorAgentMessage: MessageType = {
+        id: Date.now().toString(),
+        sender: 'agent',
+        content: `Sorry, there was an error processing your sketch: ${errorMessage}`,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorAgentMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
   
   // Switch active agent
   const switchAgent = async (agent: AgentType) => {
+    if (isLoading) return;
+    
     try {
       setIsLoading(true);
+      setError(null);
       setCurrentAgent(agent);
       
       // Send a message to the API about the agent switch
-      const apiResponse = await sendMessage(`Switching to ${agent} Agent. What specific ${agent.toLowerCase()} requirements would you like to discuss?`);
+      const apiResponse = await sendMessage(
+        `Switching to ${agent} Agent. What specific ${agent.toLowerCase()} requirements would you like to discuss?`,
+        agent
+      );
       
       // Add a system message indicating the agent switch
       const newSystemMessage: MessageType = {
@@ -245,7 +289,11 @@ export const useChatMessages = () => {
       }
       
     } catch (err: any) {
-      setError(err.message || "Failed to switch agent. Please try again.");
+      const errorMessage = err.message || "Failed to switch agent. Please try again.";
+      setError(errorMessage);
+      
+      // Revert back to the previous agent
+      setCurrentAgent(currentAgent);
     } finally {
       setIsLoading(false);
     }
@@ -253,13 +301,34 @@ export const useChatMessages = () => {
 
   // Generate architecture diagram based on masterplan
   const handleGenerateArchitecture = async () => {
-    if (!masterplanContent) {
+    if (!masterplanContent || isArchitectureGenerating) {
       setError("No masterplan available. Please generate a masterplan first.");
       return;
     }
 
     try {
       setIsArchitectureGenerating(true);
+      setError(null);
+      
+      // Add a message from the user requesting architecture diagrams
+      const newUserMessage: MessageType = {
+        id: Date.now().toString(),
+        sender: 'user',
+        content: "Can you generate architecture diagrams based on our masterplan?",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, newUserMessage]);
+      
+      // Add a processing message from the agent
+      const processingMessage: MessageType = {
+        id: (Date.now() + 1).toString(),
+        sender: 'agent',
+        content: "I'm generating architecture diagrams based on the masterplan. This may take a minute...",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, processingMessage]);
       
       // Generate architecture diagrams
       const response = await generateArchitecture(masterplanContent);
@@ -279,15 +348,17 @@ export const useChatMessages = () => {
         
         setArchitectureContent(architectureUpdatedContent);
         
-        // Add a message from the agent about architecture
-        const architectureMessage: MessageType = {
-          id: Date.now().toString(),
+        // Replace the processing message with a success message
+        const successMessage: MessageType = {
+          id: processingMessage.id,
           sender: 'agent',
-          content: "I've generated a system architecture diagram based on the masterplan. You can view it in the Architecture tab.",
+          content: "I've generated system architecture diagrams based on the masterplan. You can view them in the Architecture tab.",
           timestamp: new Date(),
         };
         
-        setMessages(prev => [...prev, architectureMessage]);
+        setMessages(prev => 
+          prev.map(msg => msg.id === processingMessage.id ? successMessage : msg)
+        );
         
         // Switch to the Architecture tab
         setCurrentRightTab("Architecture");
@@ -295,7 +366,21 @@ export const useChatMessages = () => {
         throw new Error(response.message || "Failed to generate architecture diagram");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to generate architecture. Please try again.");
+      const errorMessage = err.message || "Failed to generate architecture. Please try again.";
+      setError(errorMessage);
+      
+      // Update the processing message to show the error
+      setMessages(prev => 
+        prev.map(msg => {
+          if (msg.sender === 'agent' && msg.content.includes("I'm generating architecture diagrams")) {
+            return {
+              ...msg,
+              content: `Sorry, I couldn't generate the architecture diagrams: ${errorMessage}`
+            };
+          }
+          return msg;
+        })
+      );
     } finally {
       setIsArchitectureGenerating(false);
     }
@@ -303,7 +388,7 @@ export const useChatMessages = () => {
 
   // Generate architecture diagram without changing the tab
   const generateArchitectureInBackground = async () => {
-    if (!masterplanContent) return;
+    if (!masterplanContent || isArchitectureGenerating) return;
 
     try {
       setIsArchitectureGenerating(true);
@@ -335,9 +420,6 @@ export const useChatMessages = () => {
         };
         
         setMessages(prev => [...prev, architectureMessage]);
-        
-        // Do NOT switch tabs here - this is the key change
-        // setCurrentRightTab("Architecture"); <- This line is removed
       }
     } catch (err: any) {
       console.error("Error generating architecture in background:", err.message);
@@ -349,13 +431,14 @@ export const useChatMessages = () => {
 
   // Handle generating mockups based on masterplan and sketches
   const handleGenerateMockups = async () => {
-    if (!masterplanContent) {
+    if (!masterplanContent || isMockupGenerating) {
       setError("No masterplan available. Please generate a masterplan first.");
       return;
     }
 
     try {
       setIsMockupGenerating(true);
+      setError(null);
       
       // Add a message from the user requesting mockups
       const newUserMessage: MessageType = {
@@ -398,9 +481,6 @@ export const useChatMessages = () => {
         
         setUiUxContent(uiUxUpdatedContent);
         
-        // Switch to the UI/UX tab
-        setCurrentRightTab("UI/UX");
-        
         // Replace the processing message with a success message
         const successMessage: MessageType = {
           id: processingMessage.id,
@@ -413,15 +493,17 @@ export const useChatMessages = () => {
           prev.map(msg => msg.id === processingMessage.id ? successMessage : msg)
         );
         
+        // Switch to the UI/UX tab
+        setCurrentRightTab("UI/UX");
+        
         // Also generate architecture diagrams after mockups, but don't change the tab
-        // This is the key change: we'll generate architecture diagrams in the background
-        // without changing the tab
         generateArchitectureInBackground();
       } else {
         throw new Error(response.message || "Failed to generate mockups");
       }
     } catch (err: any) {
-      setError(err.message || "Failed to generate mockups. Please try again.");
+      const errorMessage = err.message || "Failed to generate mockups. Please try again.";
+      setError(errorMessage);
       
       // Update the processing message to show the error
       setMessages(prev => 
@@ -429,7 +511,7 @@ export const useChatMessages = () => {
           if (msg.sender === 'agent' && msg.content.includes("I'm generating UI/UX mockups")) {
             return {
               ...msg,
-              content: "Sorry, I couldn't generate the UI/UX mockups. Please try again."
+              content: `Sorry, I couldn't generate the UI/UX mockups: ${errorMessage}`
             };
           }
           return msg;
@@ -577,6 +659,11 @@ export const useChatMessages = () => {
         break;
     }
     
+    if (!content.trim()) {
+      setError("No content to export.");
+      return;
+    }
+    
     const element = document.createElement("a");
     const file = new Blob([content], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
@@ -603,9 +690,11 @@ export const useChatMessages = () => {
     isMockupGenerating,
     isArchitectureGenerating,
     submittedSketches,
+    isServerHealthy,
     
     // State setters
     setCurrentRightTab,
+    setError,
     
     // Actions
     handleSendMessage,
@@ -613,7 +702,8 @@ export const useChatMessages = () => {
     handleResetChat,
     switchAgent,
     handleExportContent,
-    handleGenerateMockups
+    handleGenerateMockups,
+    handleGenerateArchitecture
   };
 };
 

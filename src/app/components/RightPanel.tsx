@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import MockupRenderer from './MockupRenderer';
+import LoadingIndicator from './LoadingIndicator';
 
 type RightPanelTabType = "Requirements" | "UI/UX" | "Architecture";
 
@@ -21,6 +22,9 @@ interface RightPanelProps {
   onExportContent: () => void;
   panelWidth: number;
   handleResizeStart: (e: React.MouseEvent) => void;
+  // Add new props for loading states
+  isMockupGenerating?: boolean;
+  isArchitectureGenerating?: boolean;
 }
 
 // Helper function to handle inline markdown formatting like bold text
@@ -64,7 +68,9 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
     architectureDiagrams = [],
     onExportContent,
     panelWidth,
-    handleResizeStart 
+    handleResizeStart,
+    isMockupGenerating = false,
+    isArchitectureGenerating = false
   }, ref) => {
     
     // Improved markdown rendering function
@@ -224,15 +230,19 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
             );
           }
         case "UI/UX":
-          if (uiUxContent.trim() || mockups.length > 0) {
+          // Check if we're generating mockups
+          if (isMockupGenerating) {
+            return (
+              <LoadingIndicator 
+                message="Generating UI/UX mockups based on your requirements and sketches..." 
+                type="spinner"
+              />
+            );
+          } else if (uiUxContent.trim() || mockups.length > 0) {
             return (
               <>
                 {/* Text content first */}
-                { (
-                  <div className="mb-6">
-                  
-                  </div>
-                )}
+               
                 
                 {/* Then mockups with their own descriptions */}
                 {mockups.length > 0 && (
@@ -257,11 +267,19 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
             );
           }
         case "Architecture":
-          if ((architectureContent && architectureContent.trim()) || 
+          // Check if we're generating architecture diagrams
+          if (isArchitectureGenerating) {
+            return (
+              <LoadingIndicator 
+                message="Generating architecture diagrams based on your application requirements..." 
+                type="dots"
+              />
+            );
+          } else if ((architectureContent && architectureContent.trim()) || 
               (architectureDiagrams && architectureDiagrams.length > 0)) {
             return (
               <>
-              
+                {/* Text content first */}
                 
                 {/* Display architecture diagrams */}
                 {architectureDiagrams && architectureDiagrams.length > 0 && (
@@ -322,6 +340,9 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
                 : "text-gray-500 hover:text-gray-700"}`}
           >
             UI/UX
+            {isMockupGenerating && (
+              <span className="ml-1 inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+            )}
           </button>
           <button
             onClick={() => onTabChange("Architecture")}
@@ -331,6 +352,9 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
                 : "text-gray-500 hover:text-gray-700"}`}
           >
             Architecture
+            {isArchitectureGenerating && (
+              <span className="ml-1 inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+            )}
           </button>
         </div>
         
@@ -345,9 +369,13 @@ const RightPanel = forwardRef<HTMLDivElement, RightPanelProps>(
         <div className="p-3 border-t">
           <div className="flex justify-between">
             <button 
-              className={`${!hasMasterplan && currentTab === "Requirements" ? 'opacity-50 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'} px-3 py-2 rounded text-sm font-medium`}
+              className={`${(!hasMasterplan && currentTab === "Requirements") || (currentTab === "UI/UX" && isMockupGenerating) || (currentTab === "Architecture" && isArchitectureGenerating) ? 'opacity-50 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'} px-3 py-2 rounded text-sm font-medium`}
               onClick={onExportContent}
-              disabled={!hasMasterplan && currentTab === "Requirements"}
+              disabled={
+                (!hasMasterplan && currentTab === "Requirements") || 
+                (currentTab === "UI/UX" && isMockupGenerating) || 
+                (currentTab === "Architecture" && isArchitectureGenerating)
+              }
             >
               Export {currentTab === "Requirements" && hasMasterplan ? "Masterplan" : currentTab}
             </button>

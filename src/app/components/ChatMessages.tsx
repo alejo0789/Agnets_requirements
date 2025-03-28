@@ -133,6 +133,9 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
       lastMessage.content.includes('masterplan') && 
       hasMasterplan;
 
+    // Check if mockups have already been generated or are currently generating
+    const mockupsButtonDisabled = isLoading || isMockupGenerating;
+
     return (
       <div className="flex-1 overflow-y-auto bg-transparent" ref={ref}>
         <div className="max-w-6xl mx-auto px-3 py-3 space-y-4">
@@ -176,9 +179,9 @@ const ChatMessages = forwardRef<HTMLDivElement, ChatMessagesProps>(
                       <div className="mt-2">
                         <button
                           onClick={onGenerateMockups}
-                          disabled={isLoading || isMockupGenerating}
+                          disabled={mockupsButtonDisabled}
                           className={`mt-1 ${
-                            isLoading || isMockupGenerating
+                            mockupsButtonDisabled
                               ? 'bg-blue-300 cursor-not-allowed'
                               : 'bg-blue-500 hover:bg-blue-600'
                           } text-white px-3 py-1 rounded text-xs font-medium transition-colors`}

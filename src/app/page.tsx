@@ -10,7 +10,6 @@ import ChatDrawingTool from './components/ChatDrawingTool';
 import ChatMessages from './components/ChatMessages';
 import RightPanel from './components/RightPanel';
 import AgentSelector from './components/AgentSelector';
-import { convertDrawingToImage } from './utils/drawingUtils';
 
 export default function Home() {
   // Refs for scrolling
@@ -26,6 +25,7 @@ export default function Home() {
     currentAgent,
     isLoading,
     isMockupGenerating,
+    isArchitectureGenerating,
     error,
     currentRightTab,
     masterplanContent,
@@ -86,6 +86,13 @@ export default function Home() {
     };
   }, [isDrawingMode]);
 
+  // Auto scroll to top of panel when tab changes
+  useEffect(() => {
+    if (answerContainerRef.current) {
+      answerContainerRef.current.scrollTop = 0;
+    }
+  }, [currentRightTab]);
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Main Content Area */}
@@ -93,8 +100,14 @@ export default function Home() {
         {/* Top header */}
         <div className="bg-white p-5 shadow-md">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">MVP Knowledge Base Builder </h1>
-          
+            <h1 className="text-3xl font-bold">MVP Knowledge Base Builder</h1>
+            <div className="flex space-x-4 items-center">
+              <AgentSelector
+                currentAgent={currentAgent}
+                onAgentChange={switchAgent}
+                isLoading={isLoading || isMockupGenerating}
+              />
+            </div>
           </div>
         </div>
         
@@ -170,6 +183,9 @@ export default function Home() {
               onExportContent={handleExportContent}
               panelWidth={panelWidth}
               handleResizeStart={handlePanelResizeStart}
+              // Pass loading states
+              isMockupGenerating={isMockupGenerating}
+              isArchitectureGenerating={isArchitectureGenerating}
               ref={answerContainerRef}
             />
           )}

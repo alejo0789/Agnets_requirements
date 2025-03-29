@@ -11,7 +11,7 @@ interface ChatDrawingToolProps {
   onCancelDrawing: () => void;
   onSubmitDrawing: () => void;
   onGeneratePreview: () => void;
-  isSubmitting: boolean; // New prop to track background submission
+  isLoading: boolean;
   previewImage: string | null;
   isGeneratingPreview: boolean;
 }
@@ -25,7 +25,7 @@ const ChatDrawingTool = memo(({
   onCancelDrawing,
   onSubmitDrawing,
   onGeneratePreview,
-  isSubmitting,  // Track if submission is happening in background
+  isLoading,
   previewImage,
   isGeneratingPreview
 }: ChatDrawingToolProps) => {
@@ -83,7 +83,7 @@ const ChatDrawingTool = memo(({
               className={`${isGeneratingPreview ? 'bg-gray-400 cursor-wait' : 'bg-gray-300 hover:bg-gray-400'} px-4 py-2 rounded text-sm`}
               onClick={onGeneratePreview}
               type="button"
-              disabled={isGeneratingPreview || isSubmitting}
+              disabled={isGeneratingPreview || isLoading}
             >
               {isGeneratingPreview ? 'Generating...' : 'Preview'}
             </button>
@@ -94,17 +94,17 @@ const ChatDrawingTool = memo(({
               className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded mr-2 text-sm"
               onClick={onCancelDrawing}
               type="button"
-              disabled={isSubmitting}
+              disabled={isLoading}
             >
               Cancel
             </button>
             <button
-              className={`${isSubmitting ? 'bg-green-400 cursor-wait' : 'bg-green-500 hover:bg-green-600'} text-white px-4 py-2 rounded text-sm`}
+              className={`${isLoading ? 'bg-green-400 cursor-wait' : 'bg-green-500 hover:bg-green-600'} text-white px-4 py-2 rounded text-sm`}
               onClick={onSubmitDrawing}
-              disabled={isSubmitting}
+              disabled={isLoading}
               type="button"
             >
-              {isSubmitting ? 'Sending...' : 'Send Sketch'}
+              Send Sketch
             </button>
           </div>
         </div>
